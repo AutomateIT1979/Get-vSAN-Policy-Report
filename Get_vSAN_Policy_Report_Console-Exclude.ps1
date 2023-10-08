@@ -39,7 +39,7 @@ $vCenter = ("piccolo-vcenter-01.ecritel.net")
 #Message d'authentification vCenter.
 $Creds = Get-Credential
 #Si vous souhaitez exclure des stratégies vSAN spécifiques du rapport, ajoutez le nom de la stratégie à ce tableau.
-[array]$SpbmExclude = ("Management Storage Policy - Large"," VVol No Requirements Policy"," Management Storage Policy - Stretched Lite","VM Encryption Policy","Management Storage policy - Encryption")
+[array]$SpbmExclude = ("Management Storage Policy - Stretched","Management Storage Policy - Regular","Management Storage policy - Thin","Management Storage Policy - Single Node","Management Storage Policy - Stretched Lite","Management Storage Policy - Large"," VVol No Requirements Policy"," Management Storage Policy - Stretched Lite","VM Encryption Policy","Management Storage policy - Encryption")
 
 Connect-VIServer -Server $vCenter -Credential $Creds
 
