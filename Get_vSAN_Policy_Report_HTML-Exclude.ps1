@@ -59,7 +59,7 @@ $Date = (Get-Date).ToString("dd-MM-yyyy")
 $HTMLFile = "$PSScriptRoot\vReports\vSAN_Policy_Report.html"
 #-----------------------------------------------------------------------------------------------------------------------------------
 #You can add multiple vCenter Servers. Note Credentials need to work on all vCenters.
-$vCenter = ("piccolo-vcenter-01.ecritel.net") 
+$vCenter = ("piccolo-vcenter-01") 
 #Message d'authentification vCenter.
 $Creds = Get-Credential
 #-----------------------------------------------------------[HTML]------------------------------------------------------------------
@@ -72,7 +72,7 @@ Add-Content $HTMLFile "<center><h1 style='font-size:36px;'>vSAN Policy Report: $
 <#Table Style#>
 Add-Content $HTMLFile "<style>"
 Add-Content $HTMLFile "table, th, td {"
-Add-Content $HTMLFile "border: 1px solid black;"
+Add-Content $HTMLFile "border-collapse: collapse 1px solid;"
 Add-Content $HTMLFile "}"
 Add-Content $HTMLFile "th, td {"
 Add-Content $HTMLFile "padding: 10px;"
@@ -117,7 +117,6 @@ $RuleSetReport = @()
 Foreach ($VsanPolicy in $VsanPolicies) {
 
     $RuleSet = $VsanPolicy.AnyOfRuleSets.allOfRules
-
     $hostFailuresToTolerate = $RuleSet.Where( { $_.Capability.Name -eq "VSAN.hostFailuresToTolerate" }).Value
     $subFailuresToTolerate = $RuleSet.Where( { $_.Capability.Name -eq "VSAN.subFailuresToTolerate" }).Value
     $locality = $RuleSet.Where( { $_.Capability.Name -eq "VSAN.locality" }).Value
@@ -128,6 +127,20 @@ Foreach ($VsanPolicy in $VsanPolicies) {
     $cacheReservation = $RuleSet.Where( { $_.Capability.Name -eq "VSAN.cacheReservation" }).Value
     $proportionalCapacity = $RuleSet.Where( { $_.Capability.Name -eq "VSAN.proportionalCapacity" }).Value
     $replicaPreference = $RuleSet.Where( { $_.Capability.Name -eq "VSAN.replicaPreference" }).Value
+
+    Add-Content $HTMLFile "<tr>" #New Row
+    Add-Content $HTMLFile "<td style='font-size:14px; background-color: #E8E8E8'>$($vCenter)" #Data
+    Add-Content $HTMLFile "<td style='font-size:14px; background-color: #E8E8E8'>$($VsanPolicy.Name)" #Data
+    Add-Content $HTMLFile "<td style='font-size:14px; background-color: #E8E8E8'>$($hostFailuresToTolerate)" #Data
+    Add-Content $HTMLFile "<td style='font-size:14px; background-color: #E8E8E8'>$($subFailuresToTolerate)" #Data
+    Add-Content $HTMLFile "<td style='font-size:14px; background-color: #E8E8E8'>$($locality)" #Data
+    Add-Content $HTMLFile "<td style='font-size:14px; background-color: #E8E8E8'>$($checksumDisabled)" #Data
+    Add-Content $HTMLFile "<td style='font-size:14px; background-color: #E8E8E8'>$($stripeWidth)" #Data
+    Add-Content $HTMLFile "<td style='font-size:14px; background-color: #E8E8E8'>$($forceProvisioning )" #Data
+    Add-Content $HTMLFile "<td style='font-size:14px; background-color: #E8E8E8'>$($iopsLimit)" #Data
+    Add-Content $HTMLFile "<td style='font-size:14px; background-color: #E8E8E8'>$($cacheReservation)" #Data
+    Add-Content $HTMLFile "<td style='font-size:14px; background-color: #E8E8E8'>$($proportionalCapacity)" #Data
+    Add-Content $HTMLFile "<td style='font-size:14px; background-color: #E8E8E8'>$($replicaPreference)" #Data
 
     $RuleSetReport += New-Object PSObject -Property ([ordered]@{
             vCenter                = ([regex]::Matches($VsanPolicy.Uid, '@(.+):').Groups[1].Value)    
@@ -144,7 +157,6 @@ Foreach ($VsanPolicy in $VsanPolicies) {
             replicaPreference      = IF ($null -ne $replicaPreference) { $replicaPreference } else { "RAID-0 (No Data Redundancy)" }
         })
 }
-
 Disconnect-VIServer * -Force -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
 #caractère de remplacement (*) pour représenter toutes les propriétés.
 $RuleSetReport | Format-List -Property *
