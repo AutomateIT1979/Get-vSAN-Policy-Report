@@ -93,18 +93,18 @@ Add-Content $HTMLFile "<center><h2>Storage Policies</h2></center>"
 Add-Content $HTMLFile "<center>" # Center Table
 Add-Content $HTMLFile "<table>" # New Table
 Add-Content $HTMLFile "<tr>" # New Row
-Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>vCenter</th>" # Heading
-Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>StoragePolicyName</th>" # Heading
-Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>hostFailuresToTolerate</th>" # Heading
-Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>subFailuresToTolerate</th>" # Heading
-Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>locality</th>" # Heading
-Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>checksumDisabled</th>" # Heading
-Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>stripeWidth</th>" # Heading
-Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>forceProvisioning</th>" # Heading
-Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>iopsLimit</th>" # Heading
-Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>cacheReservation</th>" # Heading
-Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>proportionalCapacity</th>" # Heading
-Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>replicaPreference</th>" # Heading
+Add-Content $HTMLFile "<th style='background-color:#94dbff;'>vCenter</th>" # Heading
+Add-Content $HTMLFile "<th style='background-color:#94dbff;'>StoragePolicyName</th>" # Heading
+Add-Content $HTMLFile "<th style='background-color:#94dbff;'>hostFailuresToTolerate</th>" # Heading
+Add-Content $HTMLFile "<th style='background-color:#94dbff;'>subFailuresToTolerate</th>" # Heading
+Add-Content $HTMLFile "<th style='background-color:#94dbff;'>locality</th>" # Heading
+Add-Content $HTMLFile "<th style='background-color:#94dbff;'>checksumDisabled</th>" # Heading
+Add-Content $HTMLFile "<th style='background-color:#94dbff;'>stripeWidth</th>" # Heading
+Add-Content $HTMLFile "<th style='background-color:#94dbff;'>forceProvisioning</th>" # Heading
+Add-Content $HTMLFile "<th style='background-color:#94dbff;'>iopsLimit</th>" # Heading
+Add-Content $HTMLFile "<th style='background-color:#94dbff;'>cacheReservation</th>" # Heading
+Add-Content $HTMLFile "<th style='background-color:#94dbff;'>proportionalCapacity</th>" # Heading
+Add-Content $HTMLFile "<th style='background-color:#94dbff;'>replicaPreference</th>" # Heading
 Add-Content $HTMLFile "</tr>" # Close Heading Row
 #-----------------------------------------------------------------------------------------------------------------------------------
 #Si vous souhaitez exclure des stratégies vSAN spécifiques du rapport, ajoutez le nom de la stratégie à ce tableau.
