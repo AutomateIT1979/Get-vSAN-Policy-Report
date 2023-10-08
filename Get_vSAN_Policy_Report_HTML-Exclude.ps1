@@ -44,6 +44,16 @@ Write-Host -ForegroundColor Cyan "+---------------------------------------------
 Write-Host -Foregroundcolor Gray "| Script lancé à partir de :" $ScriptHostName`t "|`tVersion du Script :" $ScriptVersion "|"
 Write-Host -ForegroundColor Cyan "+-------------------------------------------------------------------------------+"
 #-----------------------------------------------------------------------------------------------------------------------------------
+#-----------------------------------------------------------[Dossier Racine]--------------------------------------------------------
+#Vérification de dossier racine
+if (-not (Test-Path "$PSScriptRoot\vReports")) {
+	New-Item -Path $PSScriptRoot -ItemType Directory -Name vReports
+	Write-Host -ForegroundColor Green "`tLe dossier [vReports] a été crée"
+}
+Else{
+	Write-Host -ForegroundColor White  "`tLe dossier [vReports] existe`n"
+}
+#-----------------------------------------------------------------------------------------------------------------------------------
 #You can add multiple vCenter Servers. Note Credentials need to work on all vCenters.
 $vCenter = ("piccolo-vcenter-01.ecritel.net") 
 #Message d'authentification vCenter.
