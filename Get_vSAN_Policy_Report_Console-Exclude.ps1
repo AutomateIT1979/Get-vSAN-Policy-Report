@@ -79,5 +79,5 @@ Foreach ($VsanPolicy in $VsanPolicies) {
 }
 
 Disconnect-VIServer * -Force -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
-
-$RuleSetReport | Format-Table -Property *
+#caractère de remplacement (*) pour représenter toutes les propriétés.
+$RuleSetReport | Format-List -Property *
