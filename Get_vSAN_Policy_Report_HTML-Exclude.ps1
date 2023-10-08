@@ -62,6 +62,46 @@ $HTMLFile = "$$PSScriptRoot\vReports"
 $vCenter = ("piccolo-vcenter-01.ecritel.net") 
 #Message d'authentification vCenter.
 $Creds = Get-Credential
+#-----------------------------------------------------------[HTML]------------------------------------------------------------------
+<#Main HTML#>
+Add-Content $HTMLFile "<!DOCTYPE html>"
+Add-Content $HTMLFile "<html>"
+Add-Content $HTMLFile "<head>"
+Add-Content $HTMLFile "<title> vSAN Policy Report </title>"
+Add-Content $HTMLFile "<center><h1 style='font-size:36px;'>vSAN Policy Report: $($Date)</h1></center>"
+<#Table Style#>
+Add-Content $HTMLFile "<style>"
+Add-Content $HTMLFile "table, th, td {"
+Add-Content $HTMLFile "border: 1px solid black;"
+Add-Content $HTMLFile "}"
+Add-Content $HTMLFile "th, td {"
+Add-Content $HTMLFile "padding: 10px;"
+Add-Content $HTMLFile "}"
+Add-Content $HTMLFile "</style>"
+<#Close Heading, Start Body#>
+Add-Content $HTMLFile "</head>"
+Add-Content $HTMLFile "<body>"
+<#Main border#>
+Add-Content $HTMLFile "<center>" # Center Border
+Add-Content $HTMLFile "<table>" # New Table
+Add-Content $HTMLFile "<tr>" # New Row
+Add-Content $HTMLFile "<th>" # New Heading
+<#Write Hosts Heading#>
+Add-Content $HTMLFile "<center><h2>Hosts</h2></center>"
+<#Start New Table and Write Headings#>
+
+Add-Content $HTMLFile "<center>" # Center Table
+Add-Content $HTMLFile "<table>" # New Table
+Add-Content $HTMLFile "<tr>" # New Row
+Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>Name</th>" # Heading
+Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>Server Model</th>" # Heading
+Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>CPU's</th>" # Heading
+Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>Memory GB</th>" # Heading
+Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>Version</th>" # Heading
+Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>Build</th>" # Heading
+Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>Overall Status</th>" # Heading
+Add-Content $HTMLFile "</tr>" # Close Heading Row
+#-----------------------------------------------------------------------------------------------------------------------------------
 #Si vous souhaitez exclure des stratégies vSAN spécifiques du rapport, ajoutez le nom de la stratégie à ce tableau.
 [array]$SpbmExclude = ("Management Storage Policy - Stretched","Management Storage Policy - Regular","Management Storage policy - Thin","Management Storage Policy - Single Node","Management Storage Policy - Stretched Lite","Management Storage Policy - Large"," VVol No Requirements Policy"," Management Storage Policy - Stretched Lite","VM Encryption Policy","Management Storage policy - Encryption")
 
