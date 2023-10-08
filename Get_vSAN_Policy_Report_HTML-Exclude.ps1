@@ -34,6 +34,16 @@
     Si vous souhaitez exclure des stratégies vSAN spécifiques du rapport, ajoutez le nom de la stratégie à ce tableau.
     lancer le script Get_vSAN_Policy_Report_Console-Exclude.ps1
 #>
+#Version du Script
+$ScriptVersion = "1.0"
+$ScriptHostName = $env:computername
+#La Clear-Host fonction supprime tout le texte de l’affichage actuel.
+Clear-Host
+#-----------------------------------------------------------[Write-Host]------------------------------------------------------------
+Write-Host -ForegroundColor Cyan "+-------------------------------------------------------------------------------+"
+Write-Host -Foregroundcolor Gray "| Script lancé à partir de :" $ScriptHostName`t "|`tVersion du Script :" $ScriptVersion "|"
+Write-Host -ForegroundColor Cyan "+-------------------------------------------------------------------------------+"
+#-----------------------------------------------------------------------------------------------------------------------------------
 #You can add multiple vCenter Servers. Note Credentials need to work on all vCenters.
 $vCenter = ("piccolo-vcenter-01.ecritel.net") 
 #Message d'authentification vCenter.
