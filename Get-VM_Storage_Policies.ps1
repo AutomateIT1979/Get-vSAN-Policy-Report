@@ -1,45 +1,25 @@
-<#
-.COMPONENT
-    Script PowerShell
-.NOTES
-    Auteur: Sabri CHARCHOUF
-    Date : 08 octobre 2023
-    Entreprise: Ecritel
-    Version: 1.0
-.DESCRIPTION
-    Le script permet de récuérer les règles de chaque vSAN Policy suivantes :
-        - Management Storage Policy - Large
-        - VVol No Requirements Policy
-        - Management Storage Policy - Stretched Lite
-        - VM Encryption Policy
-        - Management Storage policy - Encryption
-        - Management Storage Policy - Single Node
-        - Management Storage policy - Thin
-        - Host-local PMem Default Storage Policy
-        - vSAN Default Storage Policy
-        - Management Storage Policy - Regular
-        - SP-ENCRYPTION-VM
-        - Management Storage Policy - Stretched
-.SYNOPSIS
-    Chaque Policy a des règles bien spéciphique définissent les exigences de stockage pour vos machines virtuelles. 
-    Ces stratégies déterminent comment les objets de stockage de machine virtuelle sont provisionnés et alloués dans le datastore pour garantir le niveau de service requis.
-    Il existe 5 ensembles de règles par défaut disponibles avec les stratégies de "vSAN Default Storage Policy":
-        1.Number of Failures to Tolerate
-        2.Number of disk stripes per object
-        3.Object space reservation
-        4.Flash read cache reservation
-        5.Force provisioning
-.EXAMPLE
-    Il faut renseigner le vcenter a verifié ($vCenter).
-    Si vous souhaitez exclure des stratégies vSAN spécifiques du rapport, ajoutez le nom de la stratégie à ce tableau.
-    lancer le script Get_vSAN_Policy_Report_Console-Exclude.ps1
-#>
-#You can add multiple vCenter Servers. Note Credentials need to work on all vCenters.
-$vCenter = ("piccolo-vcenter-01.ecritel.net") 
-#Message d'authentification vCenter.
-$Creds = Get-Credential
-#Si vous souhaitez exclure des stratégies vSAN spécifiques du rapport, ajoutez le nom de la stratégie à ce tableau.
+﻿# This script extracts the Rules from vSAN Storage Policies and formats into a report.
+# Tested on vSphere 6.7 Update 3.
+# Script Author: Nicholas Mangraviti #VirtuallyWired
+# Date: 20th October 2019
+# Version: 1.0
+# Blog URL: virtuallywired.io
+# Usage: Just enter the vCenter URL or IP and Specify the Names of Policies to Exclude from the Report.
+
+
+# You can add multiple vCenter Servers. Note Credentials need to work on all vCenters.
+
+$vCenter = ("172.18.3.10") 
+
+# Prompt for vCenter Credentials
+
+$Creds = Get-Credential # Or Import Stored Credentials
+
+# If you want to Exclude specific vSAN Policies from the Report, Add the name of the policy to this Array.
+
 [array]$SpbmExclude = ("Management Storage Policy - Large"," VVol No Requirements Policy"," Management Storage Policy - Stretched Lite","VM Encryption Policy","Management Storage policy - Encryption")
+
+## Don't Edit Below This Line ##
 
 Connect-VIServer -Server $vCenter -Credential $Creds
 
