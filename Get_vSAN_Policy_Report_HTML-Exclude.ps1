@@ -54,6 +54,10 @@ Else{
 	Write-Host -ForegroundColor White  "`tLe dossier [vReports] existe`n"
 }
 #-----------------------------------------------------------------------------------------------------------------------------------
+#-----------------------------------------------------------[Variables]-------------------------------------------------------------
+$Date = (Get-Date).ToString("dd-MM-yyyy")
+$HTMLFile = "$$PSScriptRoot\vReports"
+#-----------------------------------------------------------------------------------------------------------------------------------
 #You can add multiple vCenter Servers. Note Credentials need to work on all vCenters.
 $vCenter = ("piccolo-vcenter-01.ecritel.net") 
 #Message d'authentification vCenter.
