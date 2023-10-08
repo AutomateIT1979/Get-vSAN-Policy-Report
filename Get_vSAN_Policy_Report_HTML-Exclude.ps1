@@ -56,7 +56,7 @@ Else{
 #-----------------------------------------------------------------------------------------------------------------------------------
 #-----------------------------------------------------------[Variables]-------------------------------------------------------------
 $Date = (Get-Date).ToString("dd-MM-yyyy")
-$HTMLFile = "$$PSScriptRoot\vReports"
+$HTMLFile = "$PSScriptRoot\vReports\vSAN_Policy_Report.html"
 #-----------------------------------------------------------------------------------------------------------------------------------
 #You can add multiple vCenter Servers. Note Credentials need to work on all vCenters.
 $vCenter = ("piccolo-vcenter-01.ecritel.net") 
@@ -87,19 +87,24 @@ Add-Content $HTMLFile "<table>" # New Table
 Add-Content $HTMLFile "<tr>" # New Row
 Add-Content $HTMLFile "<th>" # New Heading
 <#Write Hosts Heading#>
-Add-Content $HTMLFile "<center><h2>Hosts</h2></center>"
+Add-Content $HTMLFile "<center><h2>Storage Policies</h2></center>"
 <#Start New Table and Write Headings#>
 
 Add-Content $HTMLFile "<center>" # Center Table
 Add-Content $HTMLFile "<table>" # New Table
 Add-Content $HTMLFile "<tr>" # New Row
-Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>Name</th>" # Heading
-Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>Server Model</th>" # Heading
-Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>CPU's</th>" # Heading
-Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>Memory GB</th>" # Heading
-Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>Version</th>" # Heading
-Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>Build</th>" # Heading
-Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>Overall Status</th>" # Heading
+Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>vCenter</th>" # Heading
+Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>StoragePolicyName</th>" # Heading
+Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>hostFailuresToTolerate</th>" # Heading
+Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>subFailuresToTolerate</th>" # Heading
+Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>locality</th>" # Heading
+Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>checksumDisabled</th>" # Heading
+Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>stripeWidth</th>" # Heading
+Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>forceProvisioning</th>" # Heading
+Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>iopsLimit</th>" # Heading
+Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>cacheReservation</th>" # Heading
+Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>proportionalCapacity</th>" # Heading
+Add-Content $HTMLFile "<th style='background-color:#f7ce5e;'>replicaPreference</th>" # Heading
 Add-Content $HTMLFile "</tr>" # Close Heading Row
 #-----------------------------------------------------------------------------------------------------------------------------------
 #Si vous souhaitez exclure des stratégies vSAN spécifiques du rapport, ajoutez le nom de la stratégie à ce tableau.
