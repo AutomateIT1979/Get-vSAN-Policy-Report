@@ -71,7 +71,7 @@ Foreach ($VsanPolicy in $VsanPolicies) {
     $replicaPreference = $RuleSet.Where( { $_.Capability.Name -eq "VSAN.replicaPreference" }).Value
 
     $RuleSetReport += New-Object PSObject -Property ([ordered]@{
-                
+            vCenter                = ([regex]::Matches($VsanPolicy.Uid, '@(.+):').Groups[1].Value)    
             StoragePolicyName      = $VsanPolicy.Name
             hostFailuresToTolerate = IF ($null -ne $hostFailuresToTolerate) { $hostFailuresToTolerate } else { "--" }
             subFailuresToTolerate  = IF ($null -ne $subFailuresToTolerate) { $subFailuresToTolerate } else { "--" }
@@ -83,8 +83,6 @@ Foreach ($VsanPolicy in $VsanPolicies) {
             cacheReservation       = IF ($null -ne $cacheReservation) { $cacheReservation } else { "--" }     
             proportionalCapacity   = IF ($null -ne $proportionalCapacity) { $proportionalCapacity } else { "--" }  
             replicaPreference      = IF ($null -ne $replicaPreference) { $replicaPreference } else { "RAID-0 (No Data Redundancy)" }
-            vCenter                = ([regex]::Matches($VsanPolicy.Uid, '@(.+):').Groups[1].Value)     
-
         })
 }
 
