@@ -22,3 +22,7 @@ desktop.ini
 # OneDrive artifacts
 *conflicted copy*
 _quarantine_*/
+# Protection AES (SecurityHook)
+aeskey*.txt
+credpassword*.txt
+config_migration.ps1
