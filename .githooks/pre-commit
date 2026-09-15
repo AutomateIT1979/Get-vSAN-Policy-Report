@@ -15,6 +15,16 @@ test_pwsh() {
 }
 
 resolve_pwsh() {
+    # 0. Override explicite, accepte uniquement si l'executable repond vraiment.
+    if [ -n "${PWSH_OVERRIDE:-}" ]; then
+        if test_pwsh "$PWSH_OVERRIDE"; then
+            printf '%s' "$PWSH_OVERRIDE"
+            return 0
+        fi
+        echo "  [ERREUR] PWSH_OVERRIDE ne pointe pas vers un PowerShell executable : $PWSH_OVERRIDE" >&2
+        return 1
+    fi
+
     # 1. Vérifier d'abord les chemins par défaut de PowerShell 7
     for candidate in "/c/Program Files/PowerShell/7/pwsh.exe" "/mnt/c/Program Files/PowerShell/7/pwsh.exe"; do
         if [ -f "$candidate" ] && test_pwsh "$candidate"; then
@@ -33,6 +43,13 @@ resolve_pwsh() {
         return 0
     fi
 
+    # 3. Fallback pour postes sans PowerShell 7 installe : le hook reste bloquant
+    # sur Scan-Secrets et PS-Convention-Check, qui sont des controles textuels.
+    if command -v powershell.exe >/dev/null 2>&1 && test_pwsh "powershell.exe"; then
+        command -v powershell.exe
+        return 0
+    fi
+
     return 1
 }
 
@@ -44,8 +61,8 @@ SYNC_SCRIPT="C:\\Dev\\GitHub\\.agents\\Sync-IASkills.ps1"
 
 PWSH="$(resolve_pwsh)"
 if [ -z "$PWSH" ]; then
-    echo "  [ERREUR] Exécutable PowerShell 7 (pwsh) introuvable ou alias WindowsApps inactif."
-    echo "  Veuillez installer PowerShell 7 ou l'ajouter au PATH."
+    echo "  [ERREUR] Aucun executable PowerShell utilisable par le hook."
+    echo "  Installez PowerShell 7 ou definissez PWSH_OVERRIDE vers un executable valide."
     exit 1
 fi
 
@@ -95,35 +112,42 @@ echo ""
 # ------------------------------------------------------------
 echo "--> Étape 2/2 : Vérification conventions PowerShell..."
 
-# Récupère uniquement les fichiers .ps1 stagés (pas tous les fichiers)
-STAGED_PS1=$(git diff --cached --name-only --diff-filter=ACM | grep '\.ps1$')
+# Controle uniquement les fichiers .ps1 stages.
+SCRIPT_CONV="${REPO_ROOT_WIN}\\PS-Convention-Check.ps1"
+HAS_STAGED_PS1=false
+ALL_OK=true
 
-if [ -z "$STAGED_PS1" ]; then
-    echo "  [OK] Aucun fichier .ps1 dans ce commit."
-else
-    SCRIPT_CONV="${REPO_ROOT_WIN}\\PS-Convention-Check.ps1"
+while IFS= read -r psfile; do
+    [ -z "$psfile" ] && continue
 
-    if [ ! -f "$SCRIPT_CONV" ]; then
-        echo "  [ATTENTION] PS-Convention-Check.ps1 introuvable — vérification ignorée."
-    else
-        # Lancer sur chaque fichier .ps1 stagé
-        ALL_OK=true
-        while IFS= read -r psfile; do
+    case "$psfile" in
+        *.ps1)
+            HAS_STAGED_PS1=true
+
+            if [ ! -f "$SCRIPT_CONV" ]; then
+                echo "  [ERREUR] PS-Convention-Check.ps1 introuvable - commit bloque."
+                exit 1
+            fi
+
             PS1_WIN="${REPO_ROOT_WIN}\\${psfile//\//\\}"
             "$PWSH" -NoProfile -ExecutionPolicy Bypass -File "$SCRIPT_CONV" -Path "$PS1_WIN"
             if [ $? -ne 0 ]; then
                 ALL_OK=false
             fi
-        done <<< "$STAGED_PS1"
+            ;;
+    esac
+done <<EOF
+$(git diff --cached --name-only --diff-filter=ACM)
+EOF
 
-        if [ "$ALL_OK" = false ]; then
-            echo ""
-            echo "  [ECHEC] Violations de conventions PS détectées - commit bloqué."
-            echo "  Corriger les violations avant de commiter."
-            echo ""
-            exit 1
-        fi
-    fi
+if [ "$HAS_STAGED_PS1" = false ]; then
+    echo "  [OK] Aucun fichier .ps1 dans ce commit."
+elif [ "$ALL_OK" = false ]; then
+    echo ""
+    echo "  [ECHEC] Violations de conventions PS détectées - commit bloqué."
+    echo "  Corriger les violations avant de commiter."
+    echo ""
+    exit 1
 fi
 
 echo "  [OK] Conventions PowerShell respectées."
