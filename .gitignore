@@ -1,28 +1,28 @@
 # Logs & Reports
+LOG/
+REPORT/
 *.log
-LOGs/
-Reports/
-
-# Credentials
-*.xml
-Credentials/
-
-# Data outputs
-*.xlsx
 *.csv
-_Result/
 
-# OS & IDE
+# Configuration & Secrets
+CONF/config.ps1
+aeskey*.txt
+credpassword*.txt
+global_params.ps1
+*.key
+*.pfx
+*.pem
+
+# Documentation & AI
+CHANGELOG.md
+CLAUDE.md
+GEMINI.md
+.local-docs/
+
+# OS & IDE & Temp
 .DS_Store
 Thumbs.db
 desktop.ini
 .vscode/
 *.code-workspace
-
-# OneDrive artifacts
-*conflicted copy*
-_quarantine_*/
-# Protection AES (SecurityHook)
-aeskey*.txt
-credpassword*.txt
-config_migration.ps1
+tmp_*
