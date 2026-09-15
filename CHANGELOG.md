@@ -1,23 +1,9 @@
-# Changelog
+# Changelog - VMWARE_vSAN_StoragePolicy_ZABBIX
 
-All notable changes to this project are documented here.
-
-## [Unreleased]
-
+## [1.0.0] - 2026-09-15
 ### Added
-- New features in progress
-
-### Fixed
-- Bugs being fixed
-
-## [1.0.0] - 2026-02-17
-
-### Added
-- Initial project setup
-- Feature set
-- Pester tests
-
----
-
-**Format**: [Keep a Changelog](https://keepachangelog.com/)  
-**Versioning**: [Semantic Versioning](https://semver.org/)
+- Refonte complète du projet (anciennement Get-vSAN-Policy-Report).
+- Implémentation du pattern Zabbix (JSON multi-vCenter).
+- Création de `Start-VsanStoragePolicyCollection.ps1`.
+- Fonctions `Connect-VCenter`, `Get-VmStoragePolicyCompliance`, `Write-VmStoragePolicyComplianceJson`.
+- Architecture de gestion du 'stale' et clé composite pour Zabbix.
