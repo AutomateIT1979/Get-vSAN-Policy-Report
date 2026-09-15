@@ -32,6 +32,7 @@ function Write-VmStoragePolicyComplianceJson {
         [string]$JsonPath,
 
         [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
         [array]$CurrentResults,
 
         [Parameter(Mandatory = $true)]
@@ -70,23 +71,25 @@ function Write-VmStoragePolicyComplianceJson {
             }
         }
 
-        # 3. Traitement des nouvelles données (Fresh)
-        foreach ($vm in $CurrentResults) {
-            $compositeKey = "$($vm.VCenter)::$($vm.InstanceUuid)"
-            $finalVms[$compositeKey] = @{
-                vcenter             = $vm.VCenter
-                vmName              = $vm.VmName
-                vmInstanceUuid      = $vm.InstanceUuid
-                vmMoRef             = $vm.MoRef
-                cluster             = $vm.Cluster
-                clusterVsanEnabled  = $vm.ClusterVsanEnabled
-                datastore           = $vm.Datastore
-                datastoreType       = $vm.DatastoreType
-                storagePolicyName   = $vm.StoragePolicyName
-                complianceStatus    = $vm.ComplianceStatus
-                lastComplianceCheck = $vm.LastComplianceCheck
-                collectionStatus    = 'fresh'
-                staleSince          = $null
+        # 3. Traitement des nouvelles données (Fresh ou Error_Collecting_Entity)
+        if ($CurrentResults) {
+            foreach ($vm in $CurrentResults) {
+                $compositeKey = "$($vm.VCenter)::$($vm.InstanceUuid)"
+                $finalVms[$compositeKey] = @{
+                    vcenter             = $vm.VCenter
+                    vmName              = $vm.VMName
+                    vmInstanceUuid      = $vm.InstanceUuid
+                    vmMoRef             = if ($vm.VMId) { ($vm.VMId -split '-')[-1] } else { $null }
+                    cluster             = $vm.Cluster
+                    clusterVsanEnabled  = $vm.ClusterVsanEnabled
+                    datastore           = $vm.Datastore
+                    datastoreType       = $vm.DatastoreType
+                    storagePolicyName   = $vm.StoragePolicy
+                    complianceStatus    = $vm.ComplianceStatus
+                    lastComplianceCheck = $vm.TimeOfCheck
+                    collectionStatus    = $vm.collectionStatus
+                    staleSince          = $null
+                }
             }
         }
 

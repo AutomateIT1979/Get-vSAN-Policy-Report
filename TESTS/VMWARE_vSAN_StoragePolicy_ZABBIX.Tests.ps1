@@ -24,16 +24,14 @@
 # ============================================================
 
 Describe "VMWARE_vSAN_StoragePolicy_ZABBIX JSON Schema and Writer" {
-    
+
     BeforeAll {
         $script:jsonOutput = Join-Path $TestDrive "output.json"
         . "$PSScriptRoot\..\FUNCTIONS\Write-VmStoragePolicyComplianceJson.ps1"
-        . "$PSScriptRoot\..\FUNCTIONS\Write-Log.ps1"
-        $global:logExecutionPath = Join-Path $TestDrive "exec"
-        $global:logVMImpactPath  = Join-Path $TestDrive "impact"
-        $global:logErrorsPath    = Join-Path $TestDrive "error"
-        New-Item -ItemType Directory -Path $global:logExecutionPath -Force | Out-Null
-        New-Item -ItemType Directory -Path $global:logErrorsPath -Force | Out-Null
+
+        # Mock de Write-Log
+        function Write-Log { param($Message, $Level, $Type) }
+        $global:DryRun = $false
     }
 
     It "Should implement schemaVersion and generatedAt" {
@@ -50,39 +48,69 @@ Describe "VMWARE_vSAN_StoragePolicy_ZABBIX JSON Schema and Writer" {
                 Cluster = "Cluster1"
                 ClusterVsanEnabled = $true
                 TimeOfCheck = "2026-09-15"
+                collectionStatus = "fresh"
             }
         )
         $vcStatus = @{ "vc1" = "ok" }
-        
+
         Write-VmStoragePolicyComplianceJson -JsonPath $script:jsonOutput -CurrentResults $mockResults -VCenterStatus $vcStatus
 
         $content = Get-Content $script:jsonOutput -Raw | ConvertFrom-Json
         $content.schemaVersion | Should -Be "1.0"
         $content.generatedAt | Should -Not -BeNullOrEmpty
-        $content.data.Length | Should -Be 1
-        $content.data[0].vmInstanceUuid | Should -Be "1111-2222"
-        $content.data[0].collectionStatus | Should -Be "fresh"
+
+        $vms = $content.vmStoragePolicyCompliance
+        $keys = @($vms.psobject.properties.name)
+        $keys.Count | Should -Be 1
+
+        $firstVm = $vms."$($keys[0])"
+        $firstVm.vmInstanceUuid | Should -Be "1111-2222"
+        $firstVm.collectionStatus | Should -Be "fresh"
+    }
+
+    It "Should track missing_after_success when VM disappears and vCenter is ok" {
+        $previousJson = @{
+            vmStoragePolicyCompliance = @{
+                "vc1::1111-2222" = @{
+                    vcenter = "vc1"
+                    collectionStatus = "fresh"
+                }
+            }
+        } | ConvertTo-Json -Depth 10
+        [System.IO.File]::WriteAllText($script:jsonOutput, $previousJson)
+
+        $vcStatus = @{ "vc1" = "ok" }
+        Write-VmStoragePolicyComplianceJson -JsonPath $script:jsonOutput -CurrentResults @() -VCenterStatus $vcStatus
+
+        $content = Get-Content $script:jsonOutput -Raw | ConvertFrom-Json
+        $vms = $content.vmStoragePolicyCompliance
+        $keys = @($vms.psobject.properties.name)
+        $keys.Count | Should -Be 1
+
+        $firstVm = $vms."$($keys[0])"
+        $firstVm.collectionStatus | Should -Be "missing_after_success"
     }
 
     It "Should track stale_vcenter_unreachable when vCenter fails" {
-        # Modify VC status to error
+        $previousJson = @{
+            vmStoragePolicyCompliance = @{
+                "vc1::1111-2222" = @{
+                    vcenter = "vc1"
+                    collectionStatus = "fresh"
+                }
+            }
+        } | ConvertTo-Json -Depth 10
+        [System.IO.File]::WriteAllText($script:jsonOutput, $previousJson)
+
         $vcStatus = @{ "vc1" = "error" }
-        
         Write-VmStoragePolicyComplianceJson -JsonPath $script:jsonOutput -CurrentResults @() -VCenterStatus $vcStatus
 
         $content = Get-Content $script:jsonOutput -Raw | ConvertFrom-Json
-        $content.data.Length | Should -Be 1
-        $content.data[0].collectionStatus | Should -Be "stale_vcenter_unreachable"
-    }
+        $vms = $content.vmStoragePolicyCompliance
+        $keys = @($vms.psobject.properties.name)
+        $keys.Count | Should -Be 1
 
-    It "Should mark VM as missing_after_success if it disappears and vCenter is ok" {
-        # Modify VC status to ok, but empty results
-        $vcStatus = @{ "vc1" = "ok" }
-        
-        Write-VmStoragePolicyComplianceJson -JsonPath $script:jsonOutput -CurrentResults @() -VCenterStatus $vcStatus
-
-        $content = Get-Content $script:jsonOutput -Raw | ConvertFrom-Json
-        $content.data.Length | Should -Be 1
-        $content.data[0].collectionStatus | Should -Be "missing_after_success"
+        $firstVm = $vms."$($keys[0])"
+        $firstVm.collectionStatus | Should -Be "stale_vcenter_unreachable"
     }
 }

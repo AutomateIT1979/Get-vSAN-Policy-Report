@@ -15,12 +15,14 @@ echo "============================================================"
 echo "--> Synchronisation automatique des configurations et skills IA..."
 SYNC_SCRIPT="C:\\Dev\\GitHub\\.agents\\Sync-IASkills.ps1"
 if [ -f "$SYNC_SCRIPT" ] || [ -f "C:/Dev/GitHub/.agents/Sync-IASkills.ps1" ]; then
-    if command -v pwsh.exe >/dev/null 2>&1; then
-        PWSH_CMD="pwsh.exe"
+    if [ -x "/mnt/c/Program Files/PowerShell/7/pwsh.exe" ]; then
+        PWSH_CMD="/mnt/c/Program Files/PowerShell/7/pwsh.exe"
+    elif [ -x "/c/Program Files/PowerShell/7/pwsh.exe" ]; then
+        PWSH_CMD="/c/Program Files/PowerShell/7/pwsh.exe"
     elif command -v pwsh >/dev/null 2>&1; then
         PWSH_CMD="pwsh"
-    elif [ -x "/mnt/c/Program Files/PowerShell/7/pwsh.exe" ]; then
-        PWSH_CMD="/mnt/c/Program Files/PowerShell/7/pwsh.exe"
+    elif command -v pwsh.exe >/dev/null 2>&1; then
+        PWSH_CMD="pwsh.exe"
     else
         PWSH_CMD="pwsh"
     fi
@@ -34,12 +36,14 @@ echo ""
 # ------------------------------------------------------------
 # Résolution des chemins selon l'environnement (WSL2 / Git Bash)
 # ------------------------------------------------------------
-if command -v pwsh.exe >/dev/null 2>&1; then
-    PWSH="pwsh.exe"
+if [ -x "/mnt/c/Program Files/PowerShell/7/pwsh.exe" ]; then
+    PWSH="/mnt/c/Program Files/PowerShell/7/pwsh.exe"
+elif [ -x "/c/Program Files/PowerShell/7/pwsh.exe" ]; then
+    PWSH="/c/Program Files/PowerShell/7/pwsh.exe"
 elif command -v pwsh >/dev/null 2>&1; then
     PWSH="pwsh"
-elif [ -x "/mnt/c/Program Files/PowerShell/7/pwsh.exe" ]; then
-    PWSH="/mnt/c/Program Files/PowerShell/7/pwsh.exe"
+elif command -v pwsh.exe >/dev/null 2>&1; then
+    PWSH="pwsh.exe"
 else
     PWSH="pwsh"
 fi

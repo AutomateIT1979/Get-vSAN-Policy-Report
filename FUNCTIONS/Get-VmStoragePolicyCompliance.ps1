@@ -89,7 +89,7 @@ function Get-VmStoragePolicyCompliance {
         foreach ($vm in $allVms) {
             try {
                 $spbm = $spbmLookup[$vm.Id]
-                
+
                 $dsName = "Unknown"
                 $dsType = "Unknown"
                 if ($vm.DatastoreIdList -and $vm.DatastoreIdList.Count -gt 0) {
@@ -99,7 +99,7 @@ function Get-VmStoragePolicyCompliance {
                         $dsType = $ds.Type
                     }
                 }
-                
+
                 $clusterObj = $hostClusterLookup[$vm.VMHostId]
 
                 $instanceUuid = $vm.Id
@@ -124,12 +124,12 @@ function Get-VmStoragePolicyCompliance {
             }
             catch {
                 Write-Log -Message "[WARN] Erreur d'extraction pour la VM $($vm.Name) : $($_.Exception.Message)" -Level 'WARNING' -Type 'ERRORS'
-                
+
                 $instanceUuid = $vm.Id
                 if ($vm.ExtensionData -and $vm.ExtensionData.Config -and $vm.ExtensionData.Config.InstanceUuid) {
                     $instanceUuid = $vm.ExtensionData.Config.InstanceUuid
                 }
-                
+
                 $results += [PSCustomObject]@{
                     VMName             = $vm.Name
                     VMId               = $vm.Id
