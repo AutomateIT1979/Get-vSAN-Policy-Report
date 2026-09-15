@@ -9,44 +9,57 @@ echo "============================================================"
 echo "  PRE-COMMIT HOOK - TEMPLATE_BRS"
 echo "============================================================"
 
+
+test_pwsh() {
+    "$1" -noprofile -c "exit 0" >/dev/null 2>&1
+}
+
+resolve_pwsh() {
+    # 1. Vérifier d'abord les chemins par défaut de PowerShell 7
+    for candidate in "/c/Program Files/PowerShell/7/pwsh.exe" "/mnt/c/Program Files/PowerShell/7/pwsh.exe"; do
+        if [ -f "$candidate" ] && test_pwsh "$candidate"; then
+            printf '%s' "$candidate"
+            return 0
+        fi
+    done
+
+    # 2. Vérifier dans le PATH (attention aux alias inactifs WindowsApps)
+    if command -v pwsh.exe >/dev/null 2>&1 && test_pwsh "pwsh.exe"; then
+        command -v pwsh.exe
+        return 0
+    fi
+    if command -v pwsh >/dev/null 2>&1 && test_pwsh "pwsh"; then
+        command -v pwsh
+        return 0
+    fi
+
+    return 1
+}
+
 # ------------------------------------------------------------
 # ÉTAPE INITIALE : Synchronisation des configurations IA
 # ------------------------------------------------------------
 echo "--> Synchronisation automatique des configurations et skills IA..."
 SYNC_SCRIPT="C:\\Dev\\GitHub\\.agents\\Sync-IASkills.ps1"
+
+PWSH="$(resolve_pwsh)"
+if [ -z "$PWSH" ]; then
+    echo "  [ERREUR] Exécutable PowerShell 7 (pwsh) introuvable ou alias WindowsApps inactif."
+    echo "  Veuillez installer PowerShell 7 ou l'ajouter au PATH."
+    exit 1
+fi
+
 if [ -f "$SYNC_SCRIPT" ] || [ -f "C:/Dev/GitHub/.agents/Sync-IASkills.ps1" ]; then
-    if [ -x "/mnt/c/Program Files/PowerShell/7/pwsh.exe" ]; then
-        PWSH_CMD="/mnt/c/Program Files/PowerShell/7/pwsh.exe"
-    elif [ -x "/c/Program Files/PowerShell/7/pwsh.exe" ]; then
-        PWSH_CMD="/c/Program Files/PowerShell/7/pwsh.exe"
-    elif command -v pwsh >/dev/null 2>&1; then
-        PWSH_CMD="pwsh"
-    elif command -v pwsh.exe >/dev/null 2>&1; then
-        PWSH_CMD="pwsh.exe"
+    "$PWSH" -NoProfile -ExecutionPolicy Bypass -File "C:\\Dev\\GitHub\\.agents\\Sync-IASkills.ps1" -DisableDryRun
+    if [ $? -eq 0 ]; then
+        echo "  [OK] Synchronisation IA terminée."
     else
-        PWSH_CMD="pwsh"
+        echo "  [ATTENTION] La synchronisation IA a échoué (code de retour non nul). Le commit continue."
     fi
-    "$PWSH_CMD" -NoProfile -ExecutionPolicy Bypass -File "C:\\Dev\\GitHub\\.agents\\Sync-IASkills.ps1" -DisableDryRun
-    echo "  [OK] Synchronisation IA terminée."
 else
     echo "  [INFO] Script de synchronisation IA introuvable, étape ignorée."
 fi
 echo ""
-
-# ------------------------------------------------------------
-# Résolution des chemins selon l'environnement (WSL2 / Git Bash)
-# ------------------------------------------------------------
-if [ -x "/mnt/c/Program Files/PowerShell/7/pwsh.exe" ]; then
-    PWSH="/mnt/c/Program Files/PowerShell/7/pwsh.exe"
-elif [ -x "/c/Program Files/PowerShell/7/pwsh.exe" ]; then
-    PWSH="/c/Program Files/PowerShell/7/pwsh.exe"
-elif command -v pwsh >/dev/null 2>&1; then
-    PWSH="pwsh"
-elif command -v pwsh.exe >/dev/null 2>&1; then
-    PWSH="pwsh.exe"
-else
-    PWSH="pwsh"
-fi
 
 if command -v wslpath >/dev/null 2>&1; then
     REPO_ROOT_WSL=$(git rev-parse --show-toplevel)
