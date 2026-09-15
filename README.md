@@ -4,8 +4,8 @@ Collecte la conformité des "VM Storage Policies" vSAN pour ingestion dans Zabbi
 
 ## Prérequis
 
-- Compte de service : `svc_xxxxxxxx_xxx` (Authentification AD standard).
-- Fichiers AES : `aeskey_svc_xxxxxxxx_xxx.txt` et `credpassword_svc_xxxxxxxx_xxx.txt` dans le dossier `GLOBAL_CONF`.
+- Compte de service : `<COMPTE_SERVICE>` (Authentification AD standard).
+- Fichiers AES : `aeskey_<COMPTE_SERVICE>.txt` et `credpassword_<COMPTE_SERVICE>.txt` dans le dossier `GLOBAL_CONF`.
 - VMware.PowerCLI module installé sur le serveur d'exécution.
 
 ## Lancement

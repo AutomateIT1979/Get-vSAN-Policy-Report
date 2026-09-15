@@ -42,9 +42,9 @@ function Write-VmStoragePolicyComplianceJson {
             try {
                 $rawContent = Get-Content -Path $JsonPath -Raw -ErrorAction Stop
                 $previousData = $rawContent | ConvertFrom-Json -ErrorAction Stop
-                Write-Log -Message "JSON précédent chargé avec succès." -Level 'INFO' -LogType 'EXECUTION'
+                Write-Log -Message "JSON précédent chargé avec succès." -Level 'INFO' -Type 'EXECUTION'
             } catch {
-                Write-Log -Message "[ALERTE] Fichier JSON existant corrompu ou illisible, création à neuf." -Level 'WARN' -LogType 'EXECUTION'
+                Write-Log -Message "[ALERTE] Fichier JSON existant corrompu ou illisible, création à neuf." -Level 'WARNING' -Type 'EXECUTION'
             }
         }
 
@@ -91,7 +91,7 @@ function Write-VmStoragePolicyComplianceJson {
                 if (-not $finalVms.ContainsKey($oldKey)) {
                     $oldObj = $previousData.vmStoragePolicyCompliance.$oldKey
                     $vc = $oldObj.vcenter
-                    
+
                     $newStatus = 'missing_after_success'
                     if ($VCenterStatus[$vc] -ne 'ok') {
                         $newStatus = 'stale_vcenter_unreachable'
@@ -135,7 +135,7 @@ function Write-VmStoragePolicyComplianceJson {
 
         # 6. Écriture atomique
         if ($global:DryRun) {
-            Write-Log -Message "[DRYRUN] Simulation d'écriture JSON vers $JsonPath ($($finalVms.Count) VMs)" -Level 'INFO' -LogType 'EXECUTION'
+            Write-Log -Message "[DRYRUN] Simulation d'écriture JSON vers $JsonPath ($($finalVms.Count) VMs)" -Level 'INFO' -Type 'EXECUTION'
         } else {
             $tmpPath = "$JsonPath.tmp"
             $targetDir = Split-Path -Path $JsonPath -Parent
@@ -145,11 +145,11 @@ function Write-VmStoragePolicyComplianceJson {
 
             [System.IO.File]::WriteAllText($tmpPath, $jsonOutput)
             Move-Item -Path $tmpPath -Destination $JsonPath -Force
-            Write-Log -Message "[OK] Fichier JSON généré avec succès : $JsonPath ($($finalVms.Count) VMs)" -Level 'INFO' -LogType 'EXECUTION'
+            Write-Log -Message "[OK] Fichier JSON généré avec succès : $JsonPath ($($finalVms.Count) VMs)" -Level 'INFO' -Type 'EXECUTION'
         }
     }
     catch {
-        Write-Log -Message "[ERREUR] Échec lors de la génération du JSON : $($_.Exception.Message)" -Level 'ERROR' -LogType 'ERRORS'
+        Write-Log -Message "[ERREUR] Échec lors de la génération du JSON : $($_.Exception.Message)" -Level 'ERROR' -Type 'ERRORS'
         throw
     }
 }

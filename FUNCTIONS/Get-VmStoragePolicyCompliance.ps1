@@ -30,17 +30,17 @@ function Get-VmStoragePolicyCompliance {
     )
 
     try {
-        Write-Log -Message "Début de la collecte des VMs sur $VCenterName" -Level 'INFO' -LogType 'EXECUTION'
+        Write-Log -Message "Début de la collecte des VMs sur $VCenterName" -Level 'INFO' -Type 'EXECUTION'
 
         # 1. Collecte en bulk
         $allVms = Get-VM -Server $VCenterName -ErrorAction Stop
         if (-not $allVms) {
-            Write-Log -Message "[ALERTE] Aucune VM trouvée sur $VCenterName" -Level 'WARN' -LogType 'EXECUTION'
+            Write-Log -Message "[ALERTE] Aucune VM trouvée sur $VCenterName" -Level 'WARNING' -Type 'EXECUTION'
             return @()
         }
 
         # 2. Collecte SPBM en bulk
-        Write-Log -Message "Récupération des entités SPBM pour $($allVms.Count) VMs..." -Level 'INFO' -LogType 'EXECUTION'
+        Write-Log -Message "Récupération des entités SPBM pour $($allVms.Count) VMs..." -Level 'INFO' -Type 'EXECUTION'
         # Utilisation de lots pour éviter les timeouts si trop de VMs
         $spbmList = @()
         $batchSize = 1000
@@ -50,8 +50,8 @@ function Get-VmStoragePolicyCompliance {
         }
 
         # 3. Lookups (Datastores, Clusters, Hosts, SPBM) pour perf O(1)
-        Write-Log -Message "Construction des tables de correspondances (Lookups)..." -Level 'INFO' -LogType 'EXECUTION'
-        
+        Write-Log -Message "Construction des tables de correspondances (Lookups)..." -Level 'INFO' -Type 'EXECUTION'
+
         $datastoreLookup = @{}
         Get-Datastore -Server $VCenterName -ErrorAction Stop | ForEach-Object {
             $datastoreLookup[$_.Id] = $_
@@ -75,21 +75,21 @@ function Get-VmStoragePolicyCompliance {
         }
 
         # 4. Assemblage
-        Write-Log -Message "Assemblage des données de conformité..." -Level 'INFO' -LogType 'EXECUTION'
+        Write-Log -Message "Assemblage des données de conformité..." -Level 'INFO' -Type 'EXECUTION'
         $results = @()
 
         foreach ($vm in $allVms) {
             $vmId = $vm.Id
             $instanceUuid = if ($vm.ExtensionData -and $vm.ExtensionData.Config) { $vm.ExtensionData.Config.InstanceUuid } else { $null }
             if (-not $instanceUuid) { $instanceUuid = $vm.Uid } # fallback
-            
+
             $vmSpbm = $spbmLookup[$vmId]
-            
+
             # Gestion Cluster
             $vmCluster = $hostClusterLookup[$vm.VMHostId]
             $clusterName = if ($vmCluster) { $vmCluster.Name } else { 'Unknown' }
             $clusterVsanEnabled = if ($vmCluster -and $null -ne $vmCluster.VsanEnabled) { [bool]$vmCluster.VsanEnabled } else { $false }
-            
+
             # Gestion Datastores
             $dsNames = @()
             $dsTypes = @()
@@ -125,11 +125,11 @@ function Get-VmStoragePolicyCompliance {
             }
         }
 
-        Write-Log -Message "[OK] Collecte terminée pour $VCenterName ($($results.Count) VMs analysées)" -Level 'INFO' -LogType 'EXECUTION'
+        Write-Log -Message "[OK] Collecte terminée pour $VCenterName ($($results.Count) VMs analysées)" -Level 'INFO' -Type 'EXECUTION'
         return $results
     }
     catch {
-        Write-Log -Message "[ERREUR] Échec de la collecte sur $VCenterName : $($_.Exception.Message)" -Level 'ERROR' -LogType 'ERRORS'
-        return @()
+        Write-Log -Message "[ERREUR] Échec de la collecte sur $VCenterName : $($_.Exception.Message)" -Level 'ERROR' -Type 'ERRORS'
+        return $null
     }
 }
