@@ -1,12 +1,12 @@
 #!/bin/bash
 # ============================================================
-# Git pre-commit hook - TEMPLATE_BRS
+# Git pre-commit hook - VMWARE_vSAN_StoragePolicy_ZABBIX
 # Version : 2.0 — Secrets + Conventions PS
 # ============================================================
 
 echo ""
 echo "============================================================"
-echo "  PRE-COMMIT HOOK - TEMPLATE_BRS"
+echo "  PRE-COMMIT HOOK - VMWARE_vSAN_StoragePolicy_ZABBIX"
 echo "============================================================"
 
 

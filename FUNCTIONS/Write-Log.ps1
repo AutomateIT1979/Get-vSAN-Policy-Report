@@ -1,5 +1,5 @@
 # ============================================================
-# TEMPLATE_BRS - Write-Log.ps1
+# VMWARE_vSAN_StoragePolicy_ZABBIX - Write-Log.ps1
 # ============================================================
 # Auteur      : Sabri CHARCHOUF
 # Date        : 20/06/2026
@@ -11,7 +11,7 @@
 #
 # Architecture :
 #   Appelé par toutes les fonctions et scripts du projet.
-#   Chargé en deuxième dans BIN\Audit-ProdChanges.ps1.
+#   Chargé en deuxième dans BIN\Start-VsanStoragePolicyCollection.ps1.
 #
 # Environment :
 #   Agnostique (pas de chemin hardcodé)

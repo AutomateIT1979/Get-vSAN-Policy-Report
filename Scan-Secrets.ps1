@@ -1,5 +1,5 @@
 # ============================================================
-# TEMPLATE_BRS - Scan-Secrets.ps1
+# VMWARE_vSAN_StoragePolicy_ZABBIX - Scan-Secrets.ps1
 # ============================================================
 # Auteur      : Sabri CHARCHOUF
 # Date        : 31/07/2026
@@ -159,7 +159,7 @@ $totalAlertes = 0
 $resultats    = [System.Collections.Generic.List[PSCustomObject]]::new()
 
 Write-Host "`n============================================================" -ForegroundColor Cyan
-Write-Host "  SCAN SECRETS - TEMPLATE_BRS v1.5" -ForegroundColor Cyan
+Write-Host "  SCAN SECRETS - VMWARE_vSAN_StoragePolicy_ZABBIX v1.5" -ForegroundColor Cyan
 Write-Host "  Répertoire  : $rootPath" -ForegroundColor Cyan
 Write-Host "  Fichiers    : $($fichiers.Count) analysés" -ForegroundColor Cyan
 Write-Host "  Mode        : CODE+COMMENTAIRES pour credentials / CODE seul pour infra" -ForegroundColor Cyan
