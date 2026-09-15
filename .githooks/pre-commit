@@ -15,10 +15,14 @@ echo "============================================================"
 echo "--> Synchronisation automatique des configurations et skills IA..."
 SYNC_SCRIPT="C:\\Dev\\GitHub\\.agents\\Sync-IASkills.ps1"
 if [ -f "$SYNC_SCRIPT" ] || [ -f "C:/Dev/GitHub/.agents/Sync-IASkills.ps1" ]; then
-    if uname -r 2>/dev/null | grep -qiE "microsoft|wsl"; then
+    if command -v pwsh.exe >/dev/null 2>&1; then
+        PWSH_CMD="pwsh.exe"
+    elif command -v pwsh >/dev/null 2>&1; then
+        PWSH_CMD="pwsh"
+    elif [ -x "/mnt/c/Program Files/PowerShell/7/pwsh.exe" ]; then
         PWSH_CMD="/mnt/c/Program Files/PowerShell/7/pwsh.exe"
     else
-        PWSH_CMD="pwsh.exe"
+        PWSH_CMD="pwsh"
     fi
     "$PWSH_CMD" -NoProfile -ExecutionPolicy Bypass -File "C:\\Dev\\GitHub\\.agents\\Sync-IASkills.ps1" -DisableDryRun
     echo "  [OK] Synchronisation IA terminée."
@@ -30,14 +34,24 @@ echo ""
 # ------------------------------------------------------------
 # Résolution des chemins selon l'environnement (WSL2 / Git Bash)
 # ------------------------------------------------------------
-if uname -r 2>/dev/null | grep -qiE "microsoft|wsl"; then
-    REPO_ROOT_WSL=$(git rev-parse --show-toplevel)
-    REPO_ROOT_WIN=$(wslpath -w "$REPO_ROOT_WSL")
+if command -v pwsh.exe >/dev/null 2>&1; then
+    PWSH="pwsh.exe"
+elif command -v pwsh >/dev/null 2>&1; then
+    PWSH="pwsh"
+elif [ -x "/mnt/c/Program Files/PowerShell/7/pwsh.exe" ]; then
     PWSH="/mnt/c/Program Files/PowerShell/7/pwsh.exe"
 else
+    PWSH="pwsh"
+fi
+
+if command -v wslpath >/dev/null 2>&1; then
+    REPO_ROOT_WSL=$(git rev-parse --show-toplevel)
+    REPO_ROOT_WIN=$(wslpath -w "$REPO_ROOT_WSL" 2>/dev/null || echo "$REPO_ROOT_WSL")
+elif command -v cygpath >/dev/null 2>&1; then
     REPO_ROOT_GIT=$(git rev-parse --show-toplevel)
-    REPO_ROOT_WIN=$(cygpath -w "$REPO_ROOT_GIT")
-    PWSH="pwsh.exe"
+    REPO_ROOT_WIN=$(cygpath -w "$REPO_ROOT_GIT" 2>/dev/null || echo "$REPO_ROOT_GIT")
+else
+    REPO_ROOT_WIN=$(git rev-parse --show-toplevel)
 fi
 
 # ------------------------------------------------------------

@@ -20,7 +20,7 @@ jobs:
           Install-Module -Name Pester -Force -SkipPublisherCheck
         }
         
-        $testPath = Join-Path $PSScriptRoot "tests"
+        $testPath = Join-Path $PSScriptRoot "TESTS"
         if (Test-Path $testPath) {
           Invoke-Pester -Path $testPath -PassThru
         } else {

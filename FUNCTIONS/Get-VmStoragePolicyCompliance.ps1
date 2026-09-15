@@ -3,12 +3,19 @@
 # ============================================================
 # Auteur      : Sabri CHARCHOUF
 # Date        : 15/09/2026
-# Version     : 1.0
+# Version     : 8.0
 #
 # Description :
 #   Collecte la conformité des Storage Policies (vSAN) pour
 #   l'ensemble des VMs d'un vCenter donné. Combine les infos
 #   de cluster (VsanEnabled) et de datastore (Type).
+#
+# Usage :
+#   Get-VmStoragePolicyCompliance -VCenterName "vcenter.domain.local"
+#
+# Prérequis :
+#   - VMware.PowerCLI
+#   - Session ouverte sur le vCenter cible
 #
 # Architecture :
 #   Utilise des lookups (HashTables) pour éviter les boucles
@@ -32,9 +39,9 @@ function Get-VmStoragePolicyCompliance {
     try {
         Write-Log -Message "Début de la collecte des VMs sur $VCenterName" -Level 'INFO' -Type 'EXECUTION'
 
-        # 1. Collecte en bulk
-        $allVms = Get-VM -Server $VCenterName -ErrorAction Stop
-        if (-not $allVms) {
+        # 1. Collecte en bulk (forcée en tableau pour éviter les erreurs de scalaires)
+        $allVms = @(Get-VM -Server $VCenterName -ErrorAction Stop)
+        if (-not $allVms -or $allVms.Count -eq 0) {
             Write-Log -Message "[ALERTE] Aucune VM trouvée sur $VCenterName" -Level 'WARNING' -Type 'EXECUTION'
             return @()
         }
@@ -45,8 +52,9 @@ function Get-VmStoragePolicyCompliance {
         $spbmList = @()
         $batchSize = 1000
         for ($i = 0; $i -lt $allVms.Count; $i += $batchSize) {
-            $batch = $allVms[$i..($i + $batchSize - 1)]
-            $spbmList += Get-SpbmEntityConfiguration -VM $batch -Server $VCenterName -ErrorAction Stop
+            $end = [math]::Min($i + $batchSize - 1, $allVms.Count - 1)
+            $batch = $allVms[$i..$end]
+            $spbmList += @(Get-SpbmEntityConfiguration -VM $batch -Server $VCenterName -ErrorAction Stop)
         }
 
         # 3. Lookups (Datastores, Clusters, Hosts, SPBM) pour perf O(1)
@@ -79,49 +87,63 @@ function Get-VmStoragePolicyCompliance {
         $results = @()
 
         foreach ($vm in $allVms) {
-            $vmId = $vm.Id
-            $instanceUuid = if ($vm.ExtensionData -and $vm.ExtensionData.Config) { $vm.ExtensionData.Config.InstanceUuid } else { $null }
-            if (-not $instanceUuid) { $instanceUuid = $vm.Uid } # fallback
-
-            $vmSpbm = $spbmLookup[$vmId]
-
-            # Gestion Cluster
-            $vmCluster = $hostClusterLookup[$vm.VMHostId]
-            $clusterName = if ($vmCluster) { $vmCluster.Name } else { 'Unknown' }
-            $clusterVsanEnabled = if ($vmCluster -and $null -ne $vmCluster.VsanEnabled) { [bool]$vmCluster.VsanEnabled } else { $false }
-
-            # Gestion Datastores
-            $dsNames = @()
-            $dsTypes = @()
-            if ($vm.DatastoreIdList) {
-                foreach ($dsId in $vm.DatastoreIdList) {
-                    $ds = $datastoreLookup[$dsId]
+            try {
+                $spbm = $spbmLookup[$vm.Id]
+                
+                $dsName = "Unknown"
+                $dsType = "Unknown"
+                if ($vm.DatastoreIdList -and $vm.DatastoreIdList.Count -gt 0) {
+                    $ds = $datastoreLookup[$vm.DatastoreIdList[0]]
                     if ($ds) {
-                        $dsNames += $ds.Name
-                        $dsTypes += $ds.Type
+                        $dsName = $ds.Name
+                        $dsType = $ds.Type
                     }
                 }
+                
+                $clusterObj = $hostClusterLookup[$vm.VMHostId]
+
+                $instanceUuid = $vm.Id
+                if ($vm.ExtensionData -and $vm.ExtensionData.Config -and $vm.ExtensionData.Config.InstanceUuid) {
+                    $instanceUuid = $vm.ExtensionData.Config.InstanceUuid
+                }
+
+                $results += [PSCustomObject]@{
+                    VMName             = $vm.Name
+                    VMId               = $vm.Id
+                    InstanceUuid       = $instanceUuid
+                    VCenter            = $VCenterName
+                    ComplianceStatus   = if ($spbm -and $spbm.ComplianceStatus) { $spbm.ComplianceStatus } else { "none" }
+                    StoragePolicy      = if ($spbm -and $spbm.StoragePolicy) { $spbm.StoragePolicy.Name } else { "none" }
+                    Datastore          = $dsName
+                    DatastoreType      = $dsType
+                    Cluster            = if ($clusterObj) { $clusterObj.Name } else { "Unknown" }
+                    ClusterVsanEnabled = if ($clusterObj -and $null -ne $clusterObj.VsanEnabled) { [bool]$clusterObj.VsanEnabled } else { $false }
+                    TimeOfCheck        = if ($spbm -and $spbm.CheckTime) { $spbm.CheckTime.ToString("yyyy-MM-ddTHH:mm:ssZ") } else { $null }
+                    collectionStatus   = "fresh"
+                }
             }
-            $datastoreJoined = ($dsNames | Select-Object -Unique) -join ', '
-            $datastoreTypeJoined = ($dsTypes | Select-Object -Unique) -join ', '
-
-            # Gestion SPBM (valeurs depuis la recon)
-            $spName = if ($vmSpbm -and $vmSpbm.StoragePolicy) { $vmSpbm.StoragePolicy.Name } else { 'none' }
-            $spStatus = if ($vmSpbm -and $vmSpbm.ComplianceStatus) { $vmSpbm.ComplianceStatus.ToString() } else { 'none' }
-            $spCheckTime = if ($vmSpbm -and $vmSpbm.TimeOfCheck) { $vmSpbm.TimeOfCheck.ToString("yyyy-MM-ddTHH:mm:ssZ") } else { $null }
-
-            $results += [PSCustomObject]@{
-                VCenter             = $VCenterName
-                VmName              = $vm.Name
-                InstanceUuid        = $instanceUuid
-                MoRef               = ($vmId -split '-')[-1]
-                Cluster             = $clusterName
-                ClusterVsanEnabled  = $clusterVsanEnabled
-                Datastore           = if ($datastoreJoined) { $datastoreJoined } else { 'none' }
-                DatastoreType       = if ($datastoreTypeJoined) { $datastoreTypeJoined } else { 'none' }
-                StoragePolicyName   = $spName
-                ComplianceStatus    = $spStatus
-                LastComplianceCheck = $spCheckTime
+            catch {
+                Write-Log -Message "[WARN] Erreur d'extraction pour la VM $($vm.Name) : $($_.Exception.Message)" -Level 'WARNING' -Type 'ERRORS'
+                
+                $instanceUuid = $vm.Id
+                if ($vm.ExtensionData -and $vm.ExtensionData.Config -and $vm.ExtensionData.Config.InstanceUuid) {
+                    $instanceUuid = $vm.ExtensionData.Config.InstanceUuid
+                }
+                
+                $results += [PSCustomObject]@{
+                    VMName             = $vm.Name
+                    VMId               = $vm.Id
+                    InstanceUuid       = $instanceUuid
+                    VCenter            = $VCenterName
+                    ComplianceStatus   = "error"
+                    StoragePolicy      = "error"
+                    Datastore          = "Unknown"
+                    DatastoreType      = "Unknown"
+                    Cluster            = "Unknown"
+                    ClusterVsanEnabled = $false
+                    TimeOfCheck        = $null
+                    collectionStatus   = "error_collecting_entity"
+                }
             }
         }
 

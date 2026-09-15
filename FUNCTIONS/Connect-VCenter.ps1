@@ -3,11 +3,16 @@
 # ============================================================
 # Auteur      : Sabri CHARCHOUF
 # Date        : 15/09/2026
-# Version     : 1.0
+# Version     : 8.0
 #
 # Description :
-#   Wrapper générique pour la connexion au vCenter avec gestion
-#   d'erreurs et authentification classique via Credentials AES.
+#   Wrapper générique pour la connexion au vCenter.
+#
+# Usage :
+#   Connect-VCenter -VCenter "vcenter" -Credential $cred
+#
+# Prérequis :
+#   - VMware.PowerCLI
 #
 # Architecture :
 #   Appelé par Start-VsanStoragePolicyCollection.ps1

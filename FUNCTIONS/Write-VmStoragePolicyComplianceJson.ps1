@@ -3,11 +3,16 @@
 # ============================================================
 # Auteur      : Sabri CHARCHOUF
 # Date        : 15/09/2026
-# Version     : 1.0
+# Version     : 8.0
 #
 # Description :
-#   Rédige le fichier JSON consolidé de conformité vSAN pour Zabbix.
-#   Gère le stale, la clé composite et l'écriture atomique.
+#   Génère le JSON final de conformité vSAN pour Zabbix.
+#
+# Usage :
+#   Write-VmStoragePolicyComplianceJson -JsonPath "C:\..." -CurrentResults $res -VCenterStatus $vcStatus
+#
+# Prérequis :
+#   - Aucuns
 #
 # Architecture :
 #   Lecture de l'existant, fusion, marquage stale, écriture .tmp, Move-Item.

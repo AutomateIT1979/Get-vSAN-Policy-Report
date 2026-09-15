@@ -3,11 +3,18 @@
 # ============================================================
 # Auteur      : Sabri CHARCHOUF
 # Date        : 15/09/2026
-# Version     : 1.0
+# Version     : 8.0
 #
 # Description :
 #   Orchestrateur principal du projet. Boucle sur les vCenters,
 #   collecte la conformité vSAN, et génère le JSON final.
+#
+# Usage :
+#   .\Start-VsanStoragePolicyCollection.ps1
+#
+# Prérequis :
+#   - VMware.PowerCLI
+#   - Fichiers AES
 #
 # Architecture :
 #   Zéro logique métier. Appelle les fonctions de FUNCTIONS\.
