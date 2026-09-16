@@ -27,6 +27,8 @@
 
 $ErrorActionPreference = 'Stop'
 
+$scriptStartTime = Get-Date
+
 # 1. Chargement de la configuration
 . "$PSScriptRoot\..\CONF\config.ps1"
 
@@ -88,14 +90,18 @@ try {
         }
     }
 
-    # 6. Génération JSON
-    Write-Log -Message "Écriture du fichier JSON de sortie..." -Level 'INFO' -Type 'EXECUTION'
-    Write-VmStoragePolicyComplianceJson -JsonPath $Config.JsonOutputPath -CurrentResults $allResults -VCenterStatus $vcentersStatus
+    # 6. Génération JSON - en DryRun, écriture réelle mais redirigée vers
+    # DRYRUN\ (créé si absent) au lieu du chemin de production UNC.
+    $jsonTargetPath = if ($global:DryRun) { $Config.DryRunOutputPath } else { $Config.JsonOutputPath }
+    Write-Log -Message "Écriture du fichier JSON de sortie ($jsonTargetPath)..." -Level 'INFO' -Type 'EXECUTION'
+    Write-VmStoragePolicyComplianceJson -JsonPath $jsonTargetPath -CurrentResults $allResults -VCenterStatus $vcentersStatus
 
-    Write-Log -Message "=== FIN EXÉCUTION AVEC SUCCÈS ===" -Level 'INFO' -Type 'EXECUTION'
+    $duration = (Get-Date) - $scriptStartTime
+    Write-Log -Message "=== FIN EXÉCUTION AVEC SUCCÈS | Durée totale=$([math]::Round($duration.TotalMinutes,2)) min ($([math]::Round($duration.TotalSeconds,1)) sec) ===" -Level 'INFO' -Type 'EXECUTION'
     exit 0
 }
 catch {
-    Write-Log -Message "[ERREUR FATALE] Orchestrateur : $($_.Exception.Message)" -Level 'ERROR' -Type 'ERRORS'
+    $duration = (Get-Date) - $scriptStartTime
+    Write-Log -Message "[ERREUR FATALE] Orchestrateur : $($_.Exception.Message) | Durée avant échec=$([math]::Round($duration.TotalMinutes,2)) min" -Level 'ERROR' -Type 'ERRORS'
     exit 1
 }

@@ -141,18 +141,20 @@ function Write-VmStoragePolicyComplianceJson {
 
         $jsonOutput = $outputObject | ConvertTo-Json -Depth 10
 
-        # 6. Écriture atomique
-        if ($global:DryRun) {
-            Write-Log -Message "[DRYRUN] Simulation d'écriture JSON vers $JsonPath ($($finalVms.Count) VMs)" -Level 'INFO' -Type 'EXECUTION'
-        } else {
-            $tmpPath = "$JsonPath.tmp"
-            $targetDir = Split-Path -Path $JsonPath -Parent
-            if (-not (Test-Path $targetDir)) {
-                New-Item -ItemType Directory -Force -Path $targetDir | Out-Null
-            }
+        # 6. Écriture atomique - toujours réelle, DryRun redirige juste vers
+        # un chemin local (DRYRUN\) au lieu du chemin de production UNC.
+        $tmpPath = "$JsonPath.tmp"
+        $targetDir = Split-Path -Path $JsonPath -Parent
+        if (-not (Test-Path $targetDir)) {
+            New-Item -ItemType Directory -Force -Path $targetDir | Out-Null
+        }
 
-            [System.IO.File]::WriteAllText($tmpPath, $jsonOutput)
-            Move-Item -Path $tmpPath -Destination $JsonPath -Force
+        [System.IO.File]::WriteAllText($tmpPath, $jsonOutput)
+        Move-Item -Path $tmpPath -Destination $JsonPath -Force
+
+        if ($global:DryRun) {
+            Write-Log -Message "[DRYRUN] Fichier JSON généré (local) : $JsonPath ($($finalVms.Count) VMs)" -Level 'INFO' -Type 'EXECUTION'
+        } else {
             Write-Log -Message "[OK] Fichier JSON généré avec succès : $JsonPath ($($finalVms.Count) VMs)" -Level 'INFO' -Type 'EXECUTION'
         }
     }
