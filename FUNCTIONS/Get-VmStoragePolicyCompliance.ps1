@@ -50,11 +50,28 @@ function Get-VmStoragePolicyCompliance {
         Write-Log -Message "Récupération des entités SPBM pour $($allVms.Count) VMs..." -Level 'INFO' -Type 'EXECUTION'
         # Utilisation de lots pour éviter les timeouts si trop de VMs
         $spbmList = @()
+        $failedVmIds = @{}
         $batchSize = 1000
         for ($i = 0; $i -lt $allVms.Count; $i += $batchSize) {
             $end = [math]::Min($i + $batchSize - 1, $allVms.Count - 1)
             $batch = $allVms[$i..$end]
-            $spbmList += @(Get-SpbmEntityConfiguration -VM $batch -Server $VCenterName -ErrorAction Stop)
+            try {
+                $spbmList += @(Get-SpbmEntityConfiguration -VM $batch -Server $VCenterName -ErrorAction Stop)
+            }
+            catch {
+                # Une seule VM invalide (supprimée/en cours de vMotion) fait échouer
+                # tout le lot - repli VM par VM pour ne pas perdre les autres.
+                Write-Log -Message "[ALERTE] Echec du lot SPBM [$i-$end] ($($batch.Count) VMs) : $($_.Exception.Message) - repli VM par VM" -Level 'WARNING' -Type 'ERRORS'
+                foreach ($vmInBatch in $batch) {
+                    try {
+                        $spbmList += @(Get-SpbmEntityConfiguration -VM $vmInBatch -Server $VCenterName -ErrorAction Stop)
+                    }
+                    catch {
+                        Write-Log -Message "[WARN] SPBM indisponible pour la VM $($vmInBatch.Name) : $($_.Exception.Message)" -Level 'WARNING' -Type 'ERRORS'
+                        $failedVmIds[$vmInBatch.Id] = $true
+                    }
+                }
+            }
         }
 
         # 3. Lookups (Datastores, Clusters, Hosts, SPBM) pour perf O(1)
@@ -88,6 +105,10 @@ function Get-VmStoragePolicyCompliance {
 
         foreach ($vm in $allVms) {
             try {
+                if ($failedVmIds.ContainsKey($vm.Id)) {
+                    throw "SPBM non collecté pour cette VM (échec de lot, voir logs ERRORS)"
+                }
+
                 $spbm = $spbmLookup[$vm.Id]
 
                 $dsName = "Unknown"
