@@ -1,8 +1,11 @@
 # Logs & Reports
 LOG/
 REPORT/
+DRYRUN/
 *.log
 *.csv
+Result_DryRun*.json
+*_Compliance.json
 
 # Configuration & Secrets
 CONF/config.ps1
