@@ -3,7 +3,7 @@
 # ============================================================
 # Auteur      : Sabri CHARCHOUF
 # Date        : 15/09/2026
-# Version     : 8.0
+# Version     : 8.1
 #
 # Description :
 #   Génère le JSON final de conformité vSAN pour Zabbix.
@@ -15,7 +15,12 @@
 #   - Aucuns
 #
 # Architecture :
-#   Lecture de l'existant, fusion, marquage stale, écriture .tmp, Move-Item.
+#   Production ($global:DryRun = $false) : lecture de l'existant, fusion,
+#   marquage stale, écriture .tmp, Move-Item.
+#   DryRun ($global:DryRun = $true) : instantané isolé du run en cours,
+#   sans lecture ni fusion avec un fichier précédent (décision Sabri,
+#   16/09/2026 - évite la confusion entre l'état d'un run de test et
+#   celui d'un run précédent).
 #
 # Environment :
 #   Agnostique
@@ -43,8 +48,9 @@ function Write-VmStoragePolicyComplianceJson {
         $nowString = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ")
         $previousData = $null
 
-        # 1. Lecture de l'état précédent
-        if (Test-Path $JsonPath) {
+        # 1. Lecture de l'état précédent - jamais en DryRun (instantané isolé,
+        # voir note Architecture en tête de fichier).
+        if (-not $global:DryRun -and (Test-Path $JsonPath)) {
             try {
                 $rawContent = Get-Content -Path $JsonPath -Raw -ErrorAction Stop
                 $previousData = $rawContent | ConvertFrom-Json -ErrorAction Stop
@@ -72,18 +78,25 @@ function Write-VmStoragePolicyComplianceJson {
         }
 
         # 3. Traitement des nouvelles données (Fresh ou Error_Collecting_Entity)
+        # Le périmètre de collecte est déjà limité aux VMs sur cluster
+        # vSAN-enabled (voir Get-VmStoragePolicyCompliance.ps1) - un champ
+        # clusterVsanEnabled serait donc toujours "true" ici, retiré du
+        # schéma car redondant (décision Sabri, 16/09/2026). L'anomalie
+        # réelle à surveiller devient datastoreMismatch : VM sur cluster
+        # vSAN mais dont le datastore n'est pas de type "vsan".
         if ($CurrentResults) {
             foreach ($vm in $CurrentResults) {
                 $compositeKey = "$($vm.VCenter)::$($vm.InstanceUuid)"
+                $isFresh = $vm.collectionStatus -eq 'fresh'
                 $finalVms[$compositeKey] = @{
                     vcenter             = $vm.VCenter
                     vmName              = $vm.VMName
                     vmInstanceUuid      = $vm.InstanceUuid
                     vmMoRef             = if ($vm.VMId) { ($vm.VMId -split '-')[-1] } else { $null }
                     cluster             = $vm.Cluster
-                    clusterVsanEnabled  = $vm.ClusterVsanEnabled
                     datastore           = $vm.Datastore
                     datastoreType       = $vm.DatastoreType
+                    datastoreMismatch   = if ($isFresh) { [bool]($vm.DatastoreType -and $vm.DatastoreType -ne 'vsan') } else { $null }
                     storagePolicyName   = $vm.StoragePolicy
                     complianceStatus    = $vm.ComplianceStatus
                     lastComplianceCheck = $vm.TimeOfCheck
@@ -117,9 +130,11 @@ function Write-VmStoragePolicyComplianceJson {
                         vmInstanceUuid      = $oldObj.vmInstanceUuid
                         vmMoRef             = $oldObj.vmMoRef
                         cluster             = $oldObj.cluster
-                        clusterVsanEnabled  = $oldObj.clusterVsanEnabled
                         datastore           = $oldObj.datastore
                         datastoreType       = $oldObj.datastoreType
+                        # Donnée non fraîche : on ne réaffirme pas l'anomalie,
+                        # elle devra être reconfirmée au prochain run réussi.
+                        datastoreMismatch   = $null
                         storagePolicyName   = $oldObj.storagePolicyName
                         complianceStatus    = $oldObj.complianceStatus
                         lastComplianceCheck = $oldObj.lastComplianceCheck

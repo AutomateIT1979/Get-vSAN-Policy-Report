@@ -3,14 +3,15 @@
 # ============================================================
 # Auteur      : Sabri CHARCHOUF
 # Date        : 15/09/2026
-# Version     : 8.1
+# Version     : 8.2
 #
 # Description :
 #   Collecte la conformité des Storage Policies pour les VMs dont
 #   le cluster est vSAN-enabled (périmètre du projet : monitoring
 #   vSAN, pas l'ensemble du vCenter). Une VM dans un cluster vSAN
 #   mais sur un datastore non-vsan (datastoreType != "vsan") est
-#   une anomalie réelle à surveiller, pas un cas filtré.
+#   une anomalie réelle à surveiller (champ datastoreMismatch,
+#   calculé dans Write-VmStoragePolicyComplianceJson.ps1).
 #
 # Usage :
 #   Get-VmStoragePolicyCompliance -VCenterName "vcenter.domain.local"
@@ -18,9 +19,11 @@
 # Prérequis :
 #   - VMware.PowerCLI
 #   - Session ouverte sur le vCenter cible
-#   - Le compte utilisé doit avoir le privilège vCenter
-#     "Profile-driven Storage > Profile-driven storage view" pour
-#     que Get-SpbmEntityConfiguration retourne StoragePolicy/ComplianceStatus.
+#   - Le compte utilisé doit avoir le privilège vCenter catégorie
+#     "VM storage policies" > "View VM storage policies" pour que
+#     Get-SpbmEntityConfiguration retourne StoragePolicy/ComplianceStatus
+#     (confirmé le 16/09/2026 - PAS "Profile-driven Storage", nom
+#     de catégorie erroné supposé initialement).
 #
 # Architecture :
 #   Utilise des lookups (HashTables) pour éviter les boucles
@@ -164,7 +167,6 @@ function Get-VmStoragePolicyCompliance {
                     Datastore          = $dsName
                     DatastoreType      = $dsType
                     Cluster            = if ($clusterObj) { $clusterObj.Name } else { "Unknown" }
-                    ClusterVsanEnabled = if ($clusterObj -and $null -ne $clusterObj.VsanEnabled) { [bool]$clusterObj.VsanEnabled } else { $false }
                     TimeOfCheck        = if ($spbm -and $spbm.TimeOfCheck) { $spbm.TimeOfCheck.ToString("yyyy-MM-ddTHH:mm:ssZ") } else { $null }
                     collectionStatus   = "fresh"
                 }
@@ -187,7 +189,6 @@ function Get-VmStoragePolicyCompliance {
                     Datastore          = "Unknown"
                     DatastoreType      = "Unknown"
                     Cluster            = "Unknown"
-                    ClusterVsanEnabled = $false
                     TimeOfCheck        = $null
                     collectionStatus   = "error_collecting_entity"
                 }

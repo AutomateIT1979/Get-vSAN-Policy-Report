@@ -46,7 +46,6 @@ Describe "VMWARE_vSAN_StoragePolicy_ZABBIX JSON Schema and Writer" {
                 Datastore = "vsanDatastore"
                 DatastoreType = "vsan"
                 Cluster = "Cluster1"
-                ClusterVsanEnabled = $true
                 TimeOfCheck = "2026-09-15"
                 collectionStatus = "fresh"
             }
@@ -66,6 +65,33 @@ Describe "VMWARE_vSAN_StoragePolicy_ZABBIX JSON Schema and Writer" {
         $firstVm = $vms."$($keys[0])"
         $firstVm.vmInstanceUuid | Should -Be "1111-2222"
         $firstVm.collectionStatus | Should -Be "fresh"
+        $firstVm.datastoreMismatch | Should -Be $false
+    }
+
+    It "Should flag datastoreMismatch when a vSAN-cluster VM is on a non-vsan datastore" {
+        $mockResults = @(
+            [PSCustomObject]@{
+                VMName = "TestVM2"
+                VMId = "vm-2"
+                InstanceUuid = "3333-4444"
+                VCenter = "vc1"
+                ComplianceStatus = "notApplicable"
+                StoragePolicy = "none"
+                Datastore = "vmfsDatastore"
+                DatastoreType = "VMFS"
+                Cluster = "Cluster1"
+                TimeOfCheck = $null
+                collectionStatus = "fresh"
+            }
+        )
+        $vcStatus = @{ "vc1" = "ok" }
+
+        Write-VmStoragePolicyComplianceJson -JsonPath $script:jsonOutput -CurrentResults $mockResults -VCenterStatus $vcStatus
+
+        $content = Get-Content $script:jsonOutput -Raw | ConvertFrom-Json
+        $vms = $content.vmStoragePolicyCompliance
+        $firstVm = $vms."vc1::3333-4444"
+        $firstVm.datastoreMismatch | Should -Be $true
     }
 
     It "Should track missing_after_success when VM disappears and vCenter is ok" {
