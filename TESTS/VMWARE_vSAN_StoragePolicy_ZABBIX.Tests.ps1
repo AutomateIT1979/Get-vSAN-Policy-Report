@@ -41,12 +41,21 @@ Describe "VMWARE_vSAN_StoragePolicy_ZABBIX JSON Schema and Writer" {
                 VMId = "vm-1"
                 InstanceUuid = "1111-2222"
                 VCenter = "vc1"
-                ComplianceStatus = "compliant"
-                StoragePolicy = "vSAN Default"
-                Datastore = "vsanDatastore"
-                DatastoreType = "vsan"
                 Cluster = "Cluster1"
-                TimeOfCheck = "2026-09-15"
+                OverallComplianceStatus = "compliant"
+                PolicyMismatch = $false
+                Entities = @(
+                    [PSCustomObject]@{
+                        EntityName = "VM Home"
+                        EntityId = "VirtualMachine-vm-1"
+                        StoragePolicyName = "vSAN Default"
+                        ComplianceStatus = "compliant"
+                        Datastore = "vsanDatastore"
+                        DatastoreType = "vsan"
+                        DatastoreMismatch = $false
+                        LastComplianceCheck = "2026-09-15"
+                    }
+                )
                 collectionStatus = "fresh"
             }
         )
@@ -55,7 +64,7 @@ Describe "VMWARE_vSAN_StoragePolicy_ZABBIX JSON Schema and Writer" {
         Write-VmStoragePolicyComplianceJson -JsonPath $script:jsonOutput -CurrentResults $mockResults -VCenterStatus $vcStatus
 
         $content = Get-Content $script:jsonOutput -Raw | ConvertFrom-Json
-        $content.schemaVersion | Should -Be "1.0"
+        $content.schemaVersion | Should -Be "1.1"
         $content.generatedAt | Should -Not -BeNullOrEmpty
 
         $vms = $content.vmStoragePolicyCompliance
@@ -65,22 +74,45 @@ Describe "VMWARE_vSAN_StoragePolicy_ZABBIX JSON Schema and Writer" {
         $firstVm = $vms."$($keys[0])"
         $firstVm.vmInstanceUuid | Should -Be "1111-2222"
         $firstVm.collectionStatus | Should -Be "fresh"
-        $firstVm.datastoreMismatch | Should -Be $false
+        $firstVm.overallComplianceStatus | Should -Be "compliant"
+        $firstVm.policyMismatch | Should -Be $false
+        $firstVm.entities.Count | Should -Be 1
+        $firstVm.entities[0].entityName | Should -Be "VM Home"
+        $firstVm.entities[0].datastoreMismatch | Should -Be $false
     }
 
-    It "Should flag datastoreMismatch when a vSAN-cluster VM is on a non-vsan datastore" {
+    It "Should expose per-entity datastoreMismatch and policyMismatch" {
         $mockResults = @(
             [PSCustomObject]@{
                 VMName = "TestVM2"
                 VMId = "vm-2"
                 InstanceUuid = "3333-4444"
                 VCenter = "vc1"
-                ComplianceStatus = "notApplicable"
-                StoragePolicy = "none"
-                Datastore = "vmfsDatastore"
-                DatastoreType = "VMFS"
                 Cluster = "Cluster1"
-                TimeOfCheck = $null
+                OverallComplianceStatus = "notApplicable"
+                PolicyMismatch = $true
+                Entities = @(
+                    [PSCustomObject]@{
+                        EntityName = "VM Home"
+                        EntityId = "VirtualMachine-vm-2"
+                        StoragePolicyName = "vSAN Default"
+                        ComplianceStatus = "compliant"
+                        Datastore = "vsanDatastore"
+                        DatastoreType = "vsan"
+                        DatastoreMismatch = $false
+                        LastComplianceCheck = "2026-09-15"
+                    },
+                    [PSCustomObject]@{
+                        EntityName = "Hard disk 1"
+                        EntityId = "VirtualMachine-vm-2/2000"
+                        StoragePolicyName = "none"
+                        ComplianceStatus = "notApplicable"
+                        Datastore = "vmfsDatastore"
+                        DatastoreType = "VMFS"
+                        DatastoreMismatch = $true
+                        LastComplianceCheck = $null
+                    }
+                )
                 collectionStatus = "fresh"
             }
         )
@@ -91,7 +123,10 @@ Describe "VMWARE_vSAN_StoragePolicy_ZABBIX JSON Schema and Writer" {
         $content = Get-Content $script:jsonOutput -Raw | ConvertFrom-Json
         $vms = $content.vmStoragePolicyCompliance
         $firstVm = $vms."vc1::3333-4444"
-        $firstVm.datastoreMismatch | Should -Be $true
+        $firstVm.policyMismatch | Should -Be $true
+        $firstVm.entities.Count | Should -Be 2
+        $firstVm.entities[1].entityName | Should -Be "Hard disk 1"
+        $firstVm.entities[1].datastoreMismatch | Should -Be $true
     }
 
     It "Should track missing_after_success when VM disappears and vCenter is ok" {
@@ -115,6 +150,10 @@ Describe "VMWARE_vSAN_StoragePolicy_ZABBIX JSON Schema and Writer" {
 
         $firstVm = $vms."$($keys[0])"
         $firstVm.collectionStatus | Should -Be "missing_after_success"
+        $firstVm.policyMismatch | Should -Be $null
+        $firstVm.entities.Count | Should -Be 1
+        $firstVm.entities[0].entityName | Should -Be "VM Home"
+        $firstVm.entities[0].datastoreMismatch | Should -Be $null
     }
 
     It "Should track stale_vcenter_unreachable when vCenter fails" {
@@ -150,6 +189,7 @@ Describe "VMWARE_vSAN_StoragePolicy_ZABBIX Collector performance guards" {
         function Get-Cluster { }
         function Get-VMHost { }
         function Get-View { }
+        function Get-HardDisk { }
         function Get-SpbmEntityConfiguration { }
         function Write-Log { param($Message, $Level, $Type) }
 
@@ -201,6 +241,7 @@ Describe "VMWARE_vSAN_StoragePolicy_ZABBIX Collector performance guards" {
                 }
             }
         }
+        Mock Get-HardDisk { @() }
         Mock Get-SpbmEntityConfiguration {
             [PSCustomObject]@{
                 Entity           = [PSCustomObject]@{ Id = "VirtualMachine-vm-1" }
@@ -214,6 +255,9 @@ Describe "VMWARE_vSAN_StoragePolicy_ZABBIX Collector performance guards" {
 
         $result.Count | Should -Be 1
         $result[0].InstanceUuid | Should -Be "1111-2222"
+        $result[0].OverallComplianceStatus | Should -Be "compliant"
+        $result[0].Entities.Count | Should -Be 1
+        $result[0].Entities[0].EntityName | Should -Be "VM Home"
         Should -Invoke Get-View -Times 1 -Exactly
     }
 }

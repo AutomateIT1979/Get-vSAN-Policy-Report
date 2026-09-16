@@ -3,7 +3,7 @@
 # ============================================================
 # Auteur      : Sabri CHARCHOUF
 # Date        : 15/09/2026
-# Version     : 8.1
+# Version     : 8.2
 #
 # Description :
 #   Génère le JSON final de conformité vSAN pour Zabbix.
@@ -79,27 +79,37 @@ function Write-VmStoragePolicyComplianceJson {
 
         # 3. Traitement des nouvelles données (Fresh ou Error_Collecting_Entity)
         # Le périmètre de collecte est déjà limité aux VMs sur cluster
-        # vSAN-enabled (voir Get-VmStoragePolicyCompliance.ps1) - un champ
-        # clusterVsanEnabled serait donc toujours "true" ici, retiré du
-        # schéma car redondant (décision Sabri, 16/09/2026). L'anomalie
-        # réelle à surveiller devient datastoreMismatch : VM sur cluster
-        # vSAN mais dont le datastore n'est pas de type "vsan".
+        # vSAN-enabled (voir Get-VmStoragePolicyCompliance.ps1). Depuis
+        # le schéma 1.1, les données de policy sont détaillées par entité :
+        # VM Home + chaque disque virtuel, car les policies peuvent diverger.
         if ($CurrentResults) {
             foreach ($vm in $CurrentResults) {
                 $compositeKey = "$($vm.VCenter)::$($vm.InstanceUuid)"
                 $isFresh = $vm.collectionStatus -eq 'fresh'
+
+                $entityNodes = [System.Collections.Generic.List[object]]::new()
+                foreach ($entity in @($vm.Entities)) {
+                    [void]$entityNodes.Add(@{
+                        entityName          = $entity.EntityName
+                        entityId            = $entity.EntityId
+                        storagePolicyName   = $entity.StoragePolicyName
+                        complianceStatus    = $entity.ComplianceStatus
+                        datastore           = $entity.Datastore
+                        datastoreType       = $entity.DatastoreType
+                        datastoreMismatch   = if ($isFresh) { $entity.DatastoreMismatch } else { $null }
+                        lastComplianceCheck = $entity.LastComplianceCheck
+                    })
+                }
+
                 $finalVms[$compositeKey] = @{
                     vcenter             = $vm.VCenter
                     vmName              = $vm.VMName
                     vmInstanceUuid      = $vm.InstanceUuid
                     vmMoRef             = if ($vm.VMId) { ($vm.VMId -split '-')[-1] } else { $null }
                     cluster             = $vm.Cluster
-                    datastore           = $vm.Datastore
-                    datastoreType       = $vm.DatastoreType
-                    datastoreMismatch   = if ($isFresh) { [bool]($vm.DatastoreType -and $vm.DatastoreType -ne 'vsan') } else { $null }
-                    storagePolicyName   = $vm.StoragePolicy
-                    complianceStatus    = $vm.ComplianceStatus
-                    lastComplianceCheck = $vm.TimeOfCheck
+                    overallComplianceStatus = $vm.OverallComplianceStatus
+                    policyMismatch      = if ($isFresh) { [bool]$vm.PolicyMismatch } else { $null }
+                    entities            = [object[]]$entityNodes.ToArray()
                     collectionStatus    = $vm.collectionStatus
                     staleSince          = $null
                 }
@@ -124,20 +134,53 @@ function Write-VmStoragePolicyComplianceJson {
                         $staleSince = $nowString
                     }
 
+                    $oldEntities = [System.Collections.Generic.List[object]]::new()
+                    if ($oldObj.entities) {
+                        foreach ($oldEntity in @($oldObj.entities)) {
+                            [void]$oldEntities.Add(@{
+                                entityName          = $oldEntity.entityName
+                                entityId            = $oldEntity.entityId
+                                storagePolicyName   = $oldEntity.storagePolicyName
+                                complianceStatus    = $oldEntity.complianceStatus
+                                datastore           = $oldEntity.datastore
+                                datastoreType       = $oldEntity.datastoreType
+                                datastoreMismatch   = $null
+                                lastComplianceCheck = $oldEntity.lastComplianceCheck
+                            })
+                        }
+                    }
+                    else {
+                        [void]$oldEntities.Add(@{
+                            entityName          = "VM Home"
+                            entityId            = if ($oldObj.vmMoRef) { "VirtualMachine-vm-$($oldObj.vmMoRef)" } else { $oldKey }
+                            storagePolicyName   = $oldObj.storagePolicyName
+                            complianceStatus    = $oldObj.complianceStatus
+                            datastore           = $oldObj.datastore
+                            datastoreType       = $oldObj.datastoreType
+                            datastoreMismatch   = $null
+                            lastComplianceCheck = $oldObj.lastComplianceCheck
+                        })
+                    }
+
+                    $overallStatus = if ($oldObj.overallComplianceStatus) {
+                        $oldObj.overallComplianceStatus
+                    }
+                    else {
+                        $oldObj.complianceStatus
+                    }
+
                     $finalVms[$oldKey] = @{
                         vcenter             = $oldObj.vcenter
                         vmName              = $oldObj.vmName
                         vmInstanceUuid      = $oldObj.vmInstanceUuid
                         vmMoRef             = $oldObj.vmMoRef
                         cluster             = $oldObj.cluster
-                        datastore           = $oldObj.datastore
-                        datastoreType       = $oldObj.datastoreType
-                        # Donnée non fraîche : on ne réaffirme pas l'anomalie,
-                        # elle devra être reconfirmée au prochain run réussi.
-                        datastoreMismatch   = $null
-                        storagePolicyName   = $oldObj.storagePolicyName
-                        complianceStatus    = $oldObj.complianceStatus
-                        lastComplianceCheck = $oldObj.lastComplianceCheck
+                        overallComplianceStatus = $overallStatus
+                        # Données non fraîches : on ne réaffirme pas les
+                        # anomalies ou divergences, elles devront être
+                        # reconfirmées au prochain run réussi.
+                        policyMismatch      = $null
+                        entities            = [object[]]$oldEntities.ToArray()
                         collectionStatus    = $newStatus
                         staleSince          = $staleSince
                     }
@@ -147,7 +190,7 @@ function Write-VmStoragePolicyComplianceJson {
 
         # 5. Assemblage final
         $outputObject = @{
-            schemaVersion             = "1.0"
+            schemaVersion             = "1.1"
             generatedAt               = $nowString
             generatedBy               = "VMWARE_vSAN_StoragePolicy_ZABBIX"
             vcentersStatus            = $vcentersStatusNode
