@@ -78,14 +78,16 @@ else
 fi
 echo ""
 
+REPO_ROOT_GIT=$(git rev-parse --show-toplevel)
+REPO_ROOT_BASH="$REPO_ROOT_GIT"
+
 if command -v wslpath >/dev/null 2>&1; then
-    REPO_ROOT_WSL=$(git rev-parse --show-toplevel)
+    REPO_ROOT_WSL="$REPO_ROOT_GIT"
     REPO_ROOT_WIN=$(wslpath -w "$REPO_ROOT_WSL" 2>/dev/null || echo "$REPO_ROOT_WSL")
 elif command -v cygpath >/dev/null 2>&1; then
-    REPO_ROOT_GIT=$(git rev-parse --show-toplevel)
     REPO_ROOT_WIN=$(cygpath -w "$REPO_ROOT_GIT" 2>/dev/null || echo "$REPO_ROOT_GIT")
 else
-    REPO_ROOT_WIN=$(git rev-parse --show-toplevel)
+    REPO_ROOT_WIN="$REPO_ROOT_GIT"
 fi
 
 # ------------------------------------------------------------
@@ -114,6 +116,7 @@ echo "--> Étape 2/2 : Vérification conventions PowerShell..."
 
 # Controle uniquement les fichiers .ps1 stages.
 SCRIPT_CONV="${REPO_ROOT_WIN}\\PS-Convention-Check.ps1"
+SCRIPT_CONV_BASH="${REPO_ROOT_BASH}/PS-Convention-Check.ps1"
 HAS_STAGED_PS1=false
 ALL_OK=true
 
@@ -124,7 +127,7 @@ while IFS= read -r psfile; do
         *.ps1)
             HAS_STAGED_PS1=true
 
-            if [ ! -f "$SCRIPT_CONV" ]; then
+            if [ ! -f "$SCRIPT_CONV_BASH" ]; then
                 echo "  [ERREUR] PS-Convention-Check.ps1 introuvable - commit bloque."
                 exit 1
             fi

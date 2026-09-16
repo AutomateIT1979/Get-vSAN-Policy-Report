@@ -20,6 +20,7 @@ global_params.ps1
 CHANGELOG.md
 CLAUDE.md
 GEMINI.md
+.agents-state.json
 .local-docs/
 
 # OS & IDE & Temp

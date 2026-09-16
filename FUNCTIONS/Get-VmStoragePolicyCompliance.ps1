@@ -88,7 +88,26 @@ function Get-VmStoragePolicyCompliance {
             return @()
         }
 
-        # 4. Collecte SPBM en bulk, uniquement sur le périmètre vSAN
+        # 4. Lookup InstanceUuid via Get-View en bulk. Evite l'accès
+        # $vm.ExtensionData dans la boucle d'assemblage : sur les objets
+        # PowerCLI, ExtensionData peut déclencher un appel API par VM.
+        $uuidMessage = "Récupération en bulk des InstanceUuid pour {0} VMs..." -f $vsanVms.Count
+        Write-Log -Message $uuidMessage -Level 'INFO' -Type 'EXECUTION'
+        $instanceUuidLookup = @{}
+        $vmViewIds = @($vsanVms | ForEach-Object { $_.Id })
+        for ($i = 0; $i -lt $vmViewIds.Count; $i += 1000) {
+            $end = [math]::Min($i + 999, $vmViewIds.Count - 1)
+            $vmViewBatch = $vmViewIds[$i..$end]
+            $vmViews = @(Get-View -Server $VCenterName -Id $vmViewBatch -Property Config.InstanceUuid -ErrorAction Stop)
+            foreach ($vmView in $vmViews) {
+                if ($vmView.MoRef -and $vmView.MoRef.Value -and $vmView.Config -and $vmView.Config.InstanceUuid) {
+                    $vmPowerCliId = "$($vmView.MoRef.Type)-$($vmView.MoRef.Value)"
+                    $instanceUuidLookup[$vmPowerCliId] = $vmView.Config.InstanceUuid
+                }
+            }
+        }
+
+        # 5. Collecte SPBM en bulk, uniquement sur le périmètre vSAN
         Write-Log -Message "Récupération des entités SPBM pour $($vsanVms.Count) VMs..." -Level 'INFO' -Type 'EXECUTION'
         # Utilisation de lots pour éviter les timeouts si trop de VMs
         $spbmList = @()
@@ -123,9 +142,9 @@ function Get-VmStoragePolicyCompliance {
             }
         }
 
-        # 5. Assemblage
+        # 6. Assemblage
         Write-Log -Message "Assemblage des données de conformité..." -Level 'INFO' -Type 'EXECUTION'
-        $results = @()
+        $results = [System.Collections.Generic.List[PSCustomObject]]::new()
 
         foreach ($vm in $vsanVms) {
             try {
@@ -148,8 +167,8 @@ function Get-VmStoragePolicyCompliance {
                 $clusterObj = $hostClusterLookup[$vm.VMHostId]
 
                 $instanceUuid = $vm.Id
-                if ($vm.ExtensionData -and $vm.ExtensionData.Config -and $vm.ExtensionData.Config.InstanceUuid) {
-                    $instanceUuid = $vm.ExtensionData.Config.InstanceUuid
+                if ($instanceUuidLookup.ContainsKey($vm.Id)) {
+                    $instanceUuid = $instanceUuidLookup[$vm.Id]
                 }
 
                 # .ToString() explicite : ComplianceStatus est un enum PowerCLI
@@ -157,7 +176,7 @@ function Get-VmStoragePolicyCompliance {
                 # valeur numérique brute si on ne force pas la conversion en
                 # chaîne ici (confirmé le 16/09/2026 : affiche "none" en console
                 # mais "5" une fois passé en JSON sans conversion explicite).
-                $results += [PSCustomObject]@{
+                [void]$results.Add([PSCustomObject]@{
                     VMName             = $vm.Name
                     VMId               = $vm.Id
                     InstanceUuid       = $instanceUuid
@@ -169,17 +188,17 @@ function Get-VmStoragePolicyCompliance {
                     Cluster            = if ($clusterObj) { $clusterObj.Name } else { "Unknown" }
                     TimeOfCheck        = if ($spbm -and $spbm.TimeOfCheck) { $spbm.TimeOfCheck.ToString("yyyy-MM-ddTHH:mm:ssZ") } else { $null }
                     collectionStatus   = "fresh"
-                }
+                })
             }
             catch {
                 Write-Log -Message "[WARN] Erreur d'extraction pour la VM $($vm.Name) : $($_.Exception.Message)" -Level 'WARNING' -Type 'ERRORS'
 
                 $instanceUuid = $vm.Id
-                if ($vm.ExtensionData -and $vm.ExtensionData.Config -and $vm.ExtensionData.Config.InstanceUuid) {
-                    $instanceUuid = $vm.ExtensionData.Config.InstanceUuid
+                if ($instanceUuidLookup.ContainsKey($vm.Id)) {
+                    $instanceUuid = $instanceUuidLookup[$vm.Id]
                 }
 
-                $results += [PSCustomObject]@{
+                [void]$results.Add([PSCustomObject]@{
                     VMName             = $vm.Name
                     VMId               = $vm.Id
                     InstanceUuid       = $instanceUuid
@@ -191,12 +210,12 @@ function Get-VmStoragePolicyCompliance {
                     Cluster            = "Unknown"
                     TimeOfCheck        = $null
                     collectionStatus   = "error_collecting_entity"
-                }
+                })
             }
         }
 
         Write-Log -Message "[OK] Collecte terminée pour $VCenterName ($($results.Count) VMs analysées, périmètre vSAN)" -Level 'INFO' -Type 'EXECUTION'
-        return $results
+        return @($results)
     }
     catch {
         Write-Log -Message "[ERREUR] Échec de la collecte sur $VCenterName : $($_.Exception.Message)" -Level 'ERROR' -Type 'ERRORS'
