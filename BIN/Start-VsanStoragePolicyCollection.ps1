@@ -45,7 +45,17 @@ try {
 
     # 4. Récupération des credentials (AES via GLOBAL_CONF)
     Write-Log -Message "Récupération des credentials pour $($Config.CredentialDomain)\$($Config.CredentialAccountName)..." -Level 'INFO' -Type 'EXECUTION'
-    $cred = Get-AesCredential -Domain $Config.CredentialDomain -AccountName $Config.CredentialAccountName
+    # -UserName : certains comptes de service nécessitent le format UPN complet
+    # pour l'authentification SSO vCenter (voir CONF\config.ps1, CredentialUserName).
+    # Si non défini, Get-AesCredential retombe sur le format Domain\Compte.
+    $getAesCredParams = @{
+        Domain      = $Config.CredentialDomain
+        AccountName = $Config.CredentialAccountName
+    }
+    if ($Config.ContainsKey('CredentialUserName') -and $Config.CredentialUserName) {
+        $getAesCredParams.UserName = $Config.CredentialUserName
+    }
+    $cred = Get-AesCredential @getAesCredParams
 
     $allResults = @()
     $vcentersStatus = @{}
