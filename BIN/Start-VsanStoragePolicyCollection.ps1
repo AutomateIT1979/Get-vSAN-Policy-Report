@@ -32,6 +32,7 @@ $ErrorActionPreference = 'Stop'
 
 # 2. Chargement des fonctions (Write-Log EN PREMIER)
 . "$PSScriptRoot\..\FUNCTIONS\Write-Log.ps1"
+. "$PSScriptRoot\..\FUNCTIONS\Initialize-PowerCLI.ps1"
 . "$PSScriptRoot\..\FUNCTIONS\Connect-VCenter.ps1"
 . "$PSScriptRoot\..\FUNCTIONS\Get-VmStoragePolicyCompliance.ps1"
 . "$PSScriptRoot\..\FUNCTIONS\Write-VmStoragePolicyComplianceJson.ps1"
@@ -39,14 +40,17 @@ $ErrorActionPreference = 'Stop'
 Write-Log -Message "=== DÉBUT EXÉCUTION VMWARE_vSAN_StoragePolicy_ZABBIX ===" -Level 'INFO' -Type 'EXECUTION'
 
 try {
-    # 3. Récupération des credentials (AES via GLOBAL_CONF)
+    # 3. Chargement du module PowerCLI + config SSL/CEIP (obligatoire avant tout Connect-VIServer)
+    Initialize-PowerCLI
+
+    # 4. Récupération des credentials (AES via GLOBAL_CONF)
     Write-Log -Message "Récupération des credentials pour $($Config.CredentialDomain)\$($Config.CredentialAccountName)..." -Level 'INFO' -Type 'EXECUTION'
     $cred = Get-AesCredential -Domain $Config.CredentialDomain -AccountName $Config.CredentialAccountName
 
     $allResults = @()
     $vcentersStatus = @{}
 
-    # 4. Boucle sur les vCenters
+    # 5. Boucle sur les vCenters
     foreach ($vc in $Config.vCenters) {
         Write-Log -Message "Traitement du vCenter : $vc" -Level 'INFO' -Type 'EXECUTION'
 
@@ -74,7 +78,7 @@ try {
         }
     }
 
-    # 5. Génération JSON
+    # 6. Génération JSON
     Write-Log -Message "Écriture du fichier JSON de sortie..." -Level 'INFO' -Type 'EXECUTION'
     Write-VmStoragePolicyComplianceJson -JsonPath $Config.JsonOutputPath -CurrentResults $allResults -VCenterStatus $vcentersStatus
 
